@@ -63,8 +63,96 @@ Ensure blindSpots lists only the names of stakeholders where isOverlooked is tru
 
 // ─── 1. GEMINI PROXIES ───────────────────────────────────────────────────────
 
+/**
+ * Batch-translates all visible text fields in a simulation result using Groq.
+ * Falls back to the original English values on any error.
+ */
+async function translateSimulation(simulation, langName, apiKey) {
+  const toTranslate = {
+    decisionTitle: simulation.decisionTitle,
+    description: simulation.description,
+    summary: simulation.summary,
+    conflictSummary: simulation.conflictSummary,
+    stakeholders: simulation.stakeholders.map((s) => ({
+      id: s.id,
+      name: s.name,
+      role: s.role,
+      description: s.description,
+      voiceQuote: s.voiceQuote,
+    })),
+    conflicts: (simulation.conflicts || []).map((c) => ({
+      groupA: c.groupA,
+      groupB: c.groupB,
+      reason: c.reason,
+    })),
+  };
+
+  const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are a professional translator. You will receive a JSON object with English text values. ' +
+            `Translate every string value into ${langName}. ` +
+            'Keep ALL JSON keys in English exactly as given. Return ONLY valid JSON with no extra explanation.',
+        },
+        {
+          role: 'user',
+          content: `Translate this JSON to ${langName}:\n${JSON.stringify(toTranslate)}`,
+        },
+      ],
+      temperature: 0.2,
+      max_tokens: 8192,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Translation call failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const raw = data?.choices?.[0]?.message?.content;
+  if (!raw) throw new Error('Translation returned empty content.');
+
+  let t;
+  try {
+    t = JSON.parse(raw);
+  } catch {
+    throw new Error('Translation response was not valid JSON.');
+  }
+
+  return {
+    ...simulation,
+    decisionTitle: t.decisionTitle || simulation.decisionTitle,
+    description: t.description || simulation.description,
+    summary: t.summary || simulation.summary,
+    conflictSummary: t.conflictSummary || simulation.conflictSummary,
+    stakeholders: simulation.stakeholders.map((s, i) => ({
+      ...s,
+      name: t.stakeholders?.[i]?.name || s.name,
+      role: t.stakeholders?.[i]?.role || s.role,
+      description: t.stakeholders?.[i]?.description || s.description,
+      voiceQuote: t.stakeholders?.[i]?.voiceQuote || s.voiceQuote,
+    })),
+    conflicts: (simulation.conflicts || []).map((c, i) => ({
+      ...c,
+      groupA: t.conflicts?.[i]?.groupA || c.groupA,
+      groupB: t.conflicts?.[i]?.groupB || c.groupB,
+      reason: t.conflicts?.[i]?.reason || c.reason,
+    })),
+  };
+}
+
 router.post('/gemini/analyze', async (req, res) => {
-  const { decisionText } = req.body;
+  const { decisionText, targetLanguage } = req.body;
   if (!decisionText || decisionText.trim().length < 10) {
     return res.status(400).json({ error: 'Decision text is too short. Please provide more detail.' });
   }
@@ -127,7 +215,7 @@ router.post('/gemini/analyze', async (req, res) => {
 
     const simulationId = `sim-live-${Date.now()}`;
 
-    res.json({
+    const englishSimulation = {
       id: simulationId,
       decisionTitle: decisionText.length > 80 ? decisionText.substring(0, 80) + '…' : decisionText,
       decisionText,
@@ -138,12 +226,29 @@ router.post('/gemini/analyze', async (req, res) => {
       blindSpots: parsed.blindSpots ?? [],
       summary: parsed.summary ?? '',
       conflictSummary: parsed.conflictSummary ?? '',
-    });
+    };
+
+    // If the user spoke in Hindi or Telugu, translate all text fields
+    const langMap = { 'hi-IN': 'Hindi', 'te-IN': 'Telugu' };
+    const langName = langMap[targetLanguage];
+
+    if (langName) {
+      try {
+        const translated = await translateSimulation(englishSimulation, langName, apiKey);
+        return res.json({ ...translated, _englishVersion: englishSimulation });
+      } catch (translationErr) {
+        console.warn('[Proxy analyze] Translation failed, falling back to English:', translationErr.message);
+        // Fall through and return English
+      }
+    }
+
+    res.json(englishSimulation);
   } catch (err) {
     console.error('[Proxy analyze] Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 router.post('/gemini/refine', async (req, res) => {
   const { rawText } = req.body;

@@ -51,6 +51,8 @@ export interface SimulationRecord {
   conflictSummary?: string;
   /** MongoDB document ID, set after persistence */
   mongoId?: string;
+  /** Original English version, present when the result was translated to another language */
+  _englishVersion?: Omit<SimulationRecord, '_englishVersion'>;
 }
 
 // ---------------------------------------------------------------------------

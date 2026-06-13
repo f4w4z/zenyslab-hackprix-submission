@@ -16,7 +16,7 @@ import { getApiUrl } from './mongodb';
 /**
  * Calls Gemini 2.0 Flash via the secure server proxy.
  */
-export async function analyzeDecision(decisionText: string): Promise<SimulationRecord> {
+export async function analyzeDecision(decisionText: string, targetLanguage?: string): Promise<SimulationRecord> {
   if (decisionText.trim().length < 10) {
     throw new Error('Decision text is too short. Please provide more detail.');
   }
@@ -24,12 +24,12 @@ export async function analyzeDecision(decisionText: string): Promise<SimulationR
   const response = await fetch(`${getApiUrl()}/api/proxy/gemini/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ decisionText }),
+    body: JSON.stringify({ decisionText, targetLanguage }),
   });
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Gemini API error (${response.status}): ${errorBody}`);
+    throw new Error(`Analysis error (${response.status}): ${errorBody}`);
   }
 
   const data = await response.json();

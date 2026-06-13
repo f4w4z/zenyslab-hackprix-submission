@@ -48,6 +48,8 @@ export default function HomeScreen() {
   const [rawTranscriptText, setRawTranscriptText] = useState('');
   const [spokenLanguage, setSpokenLanguage] = useState<'unknown' | 'en-IN' | 'hi-IN' | 'te-IN'>('unknown');
   const [currentSimulation, setCurrentSimulation] = useState<SimulationRecord | null>(null);
+  const [englishSimulation, setEnglishSimulation] = useState<SimulationRecord | null>(null);
+  const [showEnglish, setShowEnglish] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null);
   const [summaryAudioState, setSummaryAudioState] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'error'>('idle');
@@ -65,7 +67,9 @@ export default function HomeScreen() {
 
   const handleSummaryPlayPause = async () => {
     if (summaryAudioState === 'loading') return;
-    const text = currentSimulation?.conflictSummary || currentSimulation?.summary || '';
+    // Always use English text for the audio pipeline — Sarvam translates it
+    const englishSim = currentSimulation?._englishVersion ?? currentSimulation;
+    const text = englishSim?.conflictSummary || englishSim?.summary || '';
     if (!text) return;
 
     // Pause if playing
@@ -316,12 +320,22 @@ export default function HomeScreen() {
   const runAnalysis = async (text: string) => {
     setErrorMessage(null);
     setCurrentSimulation(null);
+    setEnglishSimulation(null);
+    setShowEnglish(false);
     setIsLoading(true);
 
     try {
-      // Always call the real server — API key is managed server-side (Groq)
-      const simulation = await analyzeDecision(text);
+      // Pass spoken language so server can translate the result
+      const targetLang = (spokenLanguage === 'hi-IN' || spokenLanguage === 'te-IN')
+        ? spokenLanguage
+        : undefined;
 
+      const simulation = await analyzeDecision(text, targetLang);
+
+      // If a translation was done, store the English original separately
+      if (simulation._englishVersion) {
+        setEnglishSimulation(simulation._englishVersion as SimulationRecord);
+      }
       setCurrentSimulation(simulation);
 
       // Persist to MongoDB (fire-and-forget, non-blocking)
@@ -345,6 +359,8 @@ export default function HomeScreen() {
   const handleReset = () => {
     destroySummaryAudio();
     setCurrentSimulation(null);
+    setEnglishSimulation(null);
+    setShowEnglish(false);
     setProposalText('');
     setRawTranscriptText('');
     setErrorMessage(null);
@@ -360,8 +376,11 @@ export default function HomeScreen() {
   // ---------------------------------------------------------------------------
   // Derived state
   // ---------------------------------------------------------------------------
-  const overlookedStakeholders = currentSimulation
-    ? currentSimulation.stakeholders
+  // When a translation is available, toggle between translated and English views
+  const displayedSimulation = (showEnglish && englishSimulation) ? englishSimulation : currentSimulation;
+
+  const overlookedStakeholders = displayedSimulation
+    ? displayedSimulation.stakeholders
         .filter((s) => s.isOverlooked)
         .map((s) => ({ name: s.name, reason: s.description }))
     : [];
@@ -557,6 +576,32 @@ export default function HomeScreen() {
           {/* ── RESULTS ── */}
           {currentSimulation && !isLoading && (
             <View style={styles.resultsContainer}>
+              {/* Language toggle — only shown when a translation is available */}
+              {englishSimulation && (
+                <Pressable
+                  onPress={() => setShowEnglish((v) => !v)}
+                  style={({ pressed }) => [
+                    styles.langToggleBtn,
+                    { backgroundColor: theme.backgroundElement, borderColor: theme.outline },
+                    pressed && { opacity: 0.75 },
+                  ]}>
+                  <SymbolView
+                    name={{
+                      ios: showEnglish ? 'globe' : 'character.bubble',
+                      android: showEnglish ? 'language' : 'translate',
+                      web: showEnglish ? 'language' : 'translate',
+                    }}
+                    tintColor={theme.textSecondary}
+                    size={12}
+                  />
+                  <ThemedText type="code" themeColor="textSecondary" style={{ fontSize: 11 }}>
+                    {showEnglish
+                      ? (spokenLanguage === 'hi-IN' ? 'हिंदी में देखें' : 'తెలుగులో చూడండి')
+                      : 'View in English'}
+                  </ThemedText>
+                </Pressable>
+              )}
+
               {/* Proposal Banner */}
               <View style={[styles.proposalBanner, { borderLeftColor: theme.primary }]}>
                 <View style={styles.bannerHeaderRow}>
@@ -566,16 +611,16 @@ export default function HomeScreen() {
 
                 </View>
                 <ThemedText type="smallBold" style={styles.bannerTitle}>
-                  {currentSimulation.decisionTitle}
+                  {displayedSimulation?.decisionTitle}
                 </ThemedText>
               </View>
 
               {/* Minimal Summary Audio Bar — single source of summary + one pause button */}
-              {(currentSimulation.conflictSummary || currentSimulation.summary) && (
+              {(displayedSimulation?.conflictSummary || displayedSimulation?.summary) && (
                 <View style={[styles.summaryBar, { borderColor: theme.outline, backgroundColor: theme.backgroundElement }]}>
                   <View style={styles.summaryBarInner}>
                     <ThemedText type="small" themeColor="textSecondary" style={styles.summaryBarText}>
-                      {currentSimulation.conflictSummary || currentSimulation.summary}
+                      {displayedSimulation.conflictSummary || displayedSimulation.summary}
                     </ThemedText>
                     <Pressable
                       id="summary-play-btn"
@@ -611,11 +656,11 @@ export default function HomeScreen() {
                   Stakeholder Impact Directory
                 </ThemedText>
                 <ThemedText type="code" themeColor="textSecondary">
-                  {currentSimulation.stakeholders.length} GROUPS
+                  {displayedSimulation?.stakeholders.length} GROUPS
                 </ThemedText>
               </View>
 
-              {currentSimulation.stakeholders.map((stakeholder) => (
+              {displayedSimulation?.stakeholders.map((stakeholder) => (
                 <StakeholderCard
                   key={stakeholder.id}
                   name={stakeholder.name}
@@ -631,8 +676,8 @@ export default function HomeScreen() {
               <BlindSpotAlert stakeholders={overlookedStakeholders} />
 
               {/* Conflict Map */}
-              {currentSimulation.conflicts && currentSimulation.conflicts.length > 0 && (
-                <ConflictMap conflicts={currentSimulation.conflicts} />
+              {displayedSimulation?.conflicts && displayedSimulation.conflicts.length > 0 && (
+                <ConflictMap conflicts={displayedSimulation.conflicts} />
               )}
 
               {/* Accountability Ledger */}
@@ -641,9 +686,9 @@ export default function HomeScreen() {
                   ACCOUNTABILITY
                 </ThemedText>
               </View>
-              <AccountabilityLedger 
-                decision={currentSimulation.decisionTitle} 
-                blindSpots={overlookedStakeholders.map((s) => s.name)} 
+              <AccountabilityLedger
+                decision={displayedSimulation?.decisionTitle ?? ''}
+                blindSpots={overlookedStakeholders.map((s) => s.name)}
               />
 
               {/* Reset button at the bottom */}
@@ -1171,5 +1216,16 @@ const styles = StyleSheet.create({
   },
   langPillText: {
     fontSize: 10,
+  },
+  langToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    alignSelf: 'flex-end',
+    borderWidth: 1,
+    borderRadius: BorderRadius.pill,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 4,
+    marginBottom: Spacing.two,
   },
 });
