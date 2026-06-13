@@ -24,6 +24,7 @@ const cors = require('cors');
 const { MongoClient } = require('mongodb');
 
 const simulationsRouter = require('./routes/simulations');
+const solanaRouter = require('./routes/solana');
 
 // ---------------------------------------------------------------------------
 // Config
@@ -61,6 +62,7 @@ app.get('/health', (_req, res) => {
 
 // Mount routes
 app.use('/api/simulations', simulationsRouter);
+app.use('/api/solana', solanaRouter);
 
 // ---------------------------------------------------------------------------
 // MongoDB connection + server boot

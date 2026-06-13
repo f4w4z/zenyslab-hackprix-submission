@@ -174,9 +174,9 @@ export default function HistoryScreen() {
             {simulations.map((sim) => {
               const isExpanded = expandedSimId === sim.id;
               const blindSpotCount = sim.stakeholders.filter((s) => s.isOverlooked).length;
-              const overlookedNames = sim.stakeholders
+              const overlookedStakeholders = sim.stakeholders
                 .filter((s) => s.isOverlooked)
-                .map((s) => s.name);
+                .map((s) => ({ name: s.name, reason: s.description }));
 
               return (
                 <View
@@ -270,7 +270,7 @@ export default function HistoryScreen() {
                         </>
                       )}
 
-                      <BlindSpotAlert stakeholderNames={overlookedNames} />
+                      <BlindSpotAlert stakeholders={overlookedStakeholders} />
 
                       {sim.conflicts && sim.conflicts.length > 0 && (
                         <ConflictMap conflicts={sim.conflicts} />

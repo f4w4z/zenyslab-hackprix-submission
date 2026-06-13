@@ -6,6 +6,8 @@ import Animated, {
   withTiming,
   withSpring,
   Easing,
+  withRepeat,
+  withSequence,
 } from 'react-native-reanimated';
 import { SymbolView } from 'expo-symbols';
 
@@ -14,33 +16,43 @@ import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
 
 export interface BlindSpotAlertProps {
-  stakeholderNames: string[];
+  stakeholders: { name: string; reason: string }[];
 }
 
 /**
  * Animated alert banner that surfaces overlooked stakeholder groups.
- * Slides down + fades in when first rendered, drawing immediate attention
- * to the blind spots detected by Gemini.
+ * Features a pulsing animation and distinct cards for each stakeholder.
  */
-export function BlindSpotAlert({ stakeholderNames }: BlindSpotAlertProps) {
+export function BlindSpotAlert({ stakeholders }: BlindSpotAlertProps) {
   const theme = useTheme();
 
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(-16);
+  const pulseAnim = useSharedValue(1);
 
   useEffect(() => {
-    if (stakeholderNames.length > 0) {
+    if (stakeholders.length > 0) {
       opacity.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.ease) });
       translateY.value = withSpring(0, { damping: 18, stiffness: 200 });
+      
+      // Subtle pulsing animation for the container
+      pulseAnim.value = withRepeat(
+        withSequence(
+          withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1, // Infinite repeat
+        true // Reverse
+      );
     }
-  }, [stakeholderNames.length]);
+  }, [stakeholders.length]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
+    transform: [{ translateY: translateY.value }, { scale: pulseAnim.value }],
   }));
 
-  if (stakeholderNames.length === 0) return null;
+  if (stakeholders.length === 0) return null;
 
   return (
     <Animated.View
@@ -60,32 +72,37 @@ export function BlindSpotAlert({ stakeholderNames }: BlindSpotAlertProps) {
         />
         <View style={styles.headerText}>
           <ThemedText type="smallBold" style={[styles.title, { color: theme.warning }]}>
-            {stakeholderNames.length} Blind Spot{stakeholderNames.length > 1 ? 's' : ''} Detected
+            Who Did We Forget?
           </ThemedText>
           <ThemedText type="small" style={[styles.subtitle, { color: theme.warning + 'CC' }]}>
-            Groups not considered in the original proposal
+            {stakeholders.length} Blind Spot{stakeholders.length > 1 ? 's' : ''} Detected
           </ThemedText>
         </View>
       </View>
 
-      <View style={styles.chipContainer}>
-        {stakeholderNames.map((name, index) => (
+      <View style={styles.cardsContainer}>
+        {stakeholders.map((sh, index) => (
           <View
             key={index}
             style={[
-              styles.chip,
+              styles.card,
               {
                 backgroundColor: theme.surface,
                 borderColor: theme.warning + '40',
               },
             ]}>
-            <SymbolView
-              name={{ ios: 'eye.slash.fill', android: 'visibility_off', web: 'visibility_off' }}
-              tintColor={theme.warning}
-              size={11}
-            />
-            <ThemedText type="code" style={[styles.chipText, { color: theme.text }]}>
-              {name}
+            <View style={styles.cardHeader}>
+              <SymbolView
+                name={{ ios: 'eye.slash.fill', android: 'visibility_off', web: 'visibility_off' }}
+                tintColor={theme.warning}
+                size={14}
+              />
+              <ThemedText type="smallBold" style={{ color: theme.text }}>
+                {sh.name}
+              </ThemedText>
+            </View>
+            <ThemedText type="small" style={[styles.cardReason, { color: theme.textSecondary }]}>
+              {sh.reason}
             </ThemedText>
           </View>
         ))}
@@ -101,7 +118,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignSelf: 'stretch',
     marginBottom: Spacing.three,
-    gap: Spacing.two,
+    gap: Spacing.three,
   },
   header: {
     flexDirection: 'row',
@@ -113,29 +130,29 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   title: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
   },
   subtitle: {
     fontSize: 12,
   },
-  chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  cardsContainer: {
+    flexDirection: 'column',
     gap: Spacing.two,
-    marginTop: Spacing.one,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-    borderRadius: BorderRadius.sm,
+  card: {
+    padding: Spacing.three,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
     gap: Spacing.one,
   },
-  chipText: {
-    fontSize: 11,
-    fontWeight: '600',
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginBottom: 2,
+  },
+  cardReason: {
+    lineHeight: 18,
   },
 });

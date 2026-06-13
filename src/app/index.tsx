@@ -20,6 +20,7 @@ import { StakeholderCard } from '@/components/StakeholderCard';
 import { BlindSpotAlert } from '@/components/BlindSpotAlert';
 import { VoicePlayer } from '@/components/VoicePlayer';
 import { ConflictMap } from '@/components/ConflictMap';
+import { AccountabilityLedger } from '@/components/AccountabilityLedger';
 import { MOCK_SIMULATIONS, SimulationRecord, Stakeholder } from '@/constants/mockData';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -144,8 +145,10 @@ export default function HomeScreen() {
   // ---------------------------------------------------------------------------
   // Derived state
   // ---------------------------------------------------------------------------
-  const overlookedNames = currentSimulation
-    ? currentSimulation.stakeholders.filter((s) => s.isOverlooked).map((s) => s.name)
+  const overlookedStakeholders = currentSimulation
+    ? currentSimulation.stakeholders
+        .filter((s) => s.isOverlooked)
+        .map((s) => ({ name: s.name, reason: s.description }))
     : [];
 
   const translateY = bottomSheetAnim.interpolate({
@@ -401,7 +404,7 @@ export default function HomeScreen() {
                 </View>
 
                 {/* Blind Spot Alert */}
-                <BlindSpotAlert stakeholderNames={overlookedNames} />
+                <BlindSpotAlert stakeholders={overlookedStakeholders} />
 
                 {/* Conflict Map */}
                 {currentSimulation.conflicts && currentSimulation.conflicts.length > 0 && (
@@ -429,6 +432,17 @@ export default function HomeScreen() {
                     onPress={() => openStakeholderDetail(stakeholder)}
                   />
                 ))}
+
+                {/* Accountability Ledger */}
+                <View style={{ marginTop: Spacing.four, borderTopWidth: 1, borderTopColor: theme.outline, paddingTop: Spacing.four, marginBottom: Spacing.two }}>
+                  <ThemedText type="code" themeColor="textSecondary" style={{ fontWeight: '700', letterSpacing: 0.5 }}>
+                    ACCOUNTABILITY
+                  </ThemedText>
+                </View>
+                <AccountabilityLedger 
+                  decision={currentSimulation.decisionTitle} 
+                  blindSpots={overlookedStakeholders.map((s) => s.name)} 
+                />
               </View>
             )}
           </ScrollView>
