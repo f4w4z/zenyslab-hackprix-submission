@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Animated,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -13,24 +14,50 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { StakeholderCard } from '@/components/StakeholderCard';
 import { BlindSpotAlert } from '@/components/BlindSpotAlert';
+import { ConflictMap } from '@/components/ConflictMap';
 import { VoicePlayer } from '@/components/VoicePlayer';
 import { MOCK_SIMULATIONS, SimulationRecord, Stakeholder } from '@/constants/mockData';
 import { useTheme } from '@/hooks/use-theme';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BorderRadius, BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { listSimulations, deleteSimulation } from '@/services/mongodb';
 
 export default function HistoryScreen() {
   const theme = useTheme();
 
-  // Selected item states
-  const [expandedSimId, setExpandedSimId] = useState<string | null>('sim-1'); // expand first one by default
+  const [simulations, setSimulations] = useState<SimulationRecord[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandedSimId, setExpandedSimId] = useState<string | null>(null);
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null);
+  const [selectedSimulation, setSelectedSimulation] = useState<SimulationRecord | null>(null);
 
-  // Bottom sheet animation values
   const bottomSheetAnim = useRef(new Animated.Value(0)).current;
 
-  // Bottom sheet open/close
-  const openStakeholderDetail = (stakeholder: Stakeholder) => {
+  // Load simulations from MongoDB on mount (fall back to mock data)
+  const loadHistory = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const remote = await listSimulations();
+      if (remote.length > 0) {
+        setSimulations(remote);
+      } else {
+        // Fall back to mock data if MongoDB not configured
+        setSimulations(MOCK_SIMULATIONS);
+      }
+    } catch {
+      setSimulations(MOCK_SIMULATIONS);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  // Bottom sheet controls
+  const openStakeholderDetail = (sim: SimulationRecord, stakeholder: Stakeholder) => {
     setSelectedStakeholder(stakeholder);
+    setSelectedSimulation(sim);
     Animated.timing(bottomSheetAnim, {
       toValue: 1,
       duration: 300,
@@ -45,11 +72,22 @@ export default function HistoryScreen() {
       useNativeDriver: true,
     }).start(() => {
       setSelectedStakeholder(null);
+      setSelectedSimulation(null);
     });
   };
 
-  const toggleExpandSimulation = (id: string) => {
+  const toggleExpand = (id: string) => {
     setExpandedSimId((prev) => (prev === id ? null : id));
+  };
+
+  const handleDelete = async (sim: SimulationRecord) => {
+    if (!sim.mongoId) return;
+    try {
+      await deleteSimulation(sim.mongoId);
+      setSimulations((prev) => prev.filter((s) => s.id !== sim.id));
+    } catch (err) {
+      console.warn('Delete failed:', err);
+    }
   };
 
   const formatDate = (isoString: string) => {
@@ -63,16 +101,14 @@ export default function HistoryScreen() {
     });
   };
 
-  // Vertical slide interpolation for sheet
   const translateY = bottomSheetAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [600, 0],
+    outputRange: [700, 0],
   });
 
-  // Background overlay opacity interpolation
   const overlayOpacity = bottomSheetAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 0.4],
+    outputRange: [0, 0.45],
   });
 
   return (
@@ -83,7 +119,7 @@ export default function HistoryScreen() {
           <View style={styles.brandRow}>
             <View style={[styles.brandIcon, { backgroundColor: theme.primaryContainer }]}>
               <SymbolView
-                name={{ ios: 'folder', android: 'history', web: 'history' } as any}
+                name={{ ios: 'clock.fill', android: 'history', web: 'history' } as any}
                 tintColor={theme.primary}
                 size={20}
               />
@@ -102,21 +138,45 @@ export default function HistoryScreen() {
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
-          
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={loadHistory}
+              tintColor={theme.primary}
+              colors={[theme.primary]}
+            />
+          }>
           <View style={styles.contentWrapper}>
             <ThemedText type="subtitle" style={styles.title}>
               History Log
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary" style={styles.description}>
-              Explore details of previous decision evaluations. Expanding a record allows you to review the mapped stakeholders and listen to their local perspectives.
+              Pull down to refresh. Tap a record to expand and explore its stakeholder evaluations.
             </ThemedText>
 
-            {/* List of Previous Simulations */}
-            {MOCK_SIMULATIONS.map((sim) => {
+            {simulations.length === 0 && !isRefreshing && (
+              <View style={[styles.emptyCard, { backgroundColor: theme.backgroundElement }]}>
+                <SymbolView
+                  name={{ ios: 'tray', android: 'inbox', web: 'inbox' }}
+                  tintColor={theme.textSecondary}
+                  size={40}
+                />
+                <ThemedText type="smallBold" themeColor="textSecondary">
+                  No history yet
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center' }}>
+                  Analyse a decision from the Analyze tab to see it here.
+                </ThemedText>
+              </View>
+            )}
+
+            {simulations.map((sim) => {
               const isExpanded = expandedSimId === sim.id;
               const blindSpotCount = sim.stakeholders.filter((s) => s.isOverlooked).length;
-              const overlookedNames = sim.stakeholders.filter((s) => s.isOverlooked).map((s) => s.name);
+              const overlookedNames = sim.stakeholders
+                .filter((s) => s.isOverlooked)
+                .map((s) => s.name);
 
               return (
                 <View
@@ -129,9 +189,9 @@ export default function HistoryScreen() {
                       borderWidth: isExpanded ? 1.5 : 1,
                     },
                   ]}>
-                  {/* Collapsible Header */}
+                  {/* Collapsible header */}
                   <Pressable
-                    onPress={() => toggleExpandSimulation(sim.id)}
+                    onPress={() => toggleExpand(sim.id)}
                     style={styles.simCardHeader}>
                     <View style={styles.simMeta}>
                       <ThemedText type="code" themeColor="textSecondary" style={styles.simDate}>
@@ -141,7 +201,6 @@ export default function HistoryScreen() {
                         {sim.decisionTitle}
                       </ThemedText>
 
-                      {/* Info Chips */}
                       <View style={styles.metaBadgeRow}>
                         <View style={[styles.metaBadge, { backgroundColor: theme.backgroundElement }]}>
                           <SymbolView
@@ -161,8 +220,25 @@ export default function HistoryScreen() {
                               tintColor={theme.warning}
                               size={12}
                             />
-                            <ThemedText type="code" style={[styles.badgeText, { color: theme.warning }]}>
+                            <ThemedText
+                              type="code"
+                              style={[styles.badgeText, { color: theme.warning }]}>
                               {blindSpotCount} Blind Spots
+                            </ThemedText>
+                          </View>
+                        )}
+
+                        {sim.conflicts && sim.conflicts.length > 0 && (
+                          <View style={[styles.metaBadge, { backgroundColor: theme.conflictContainer }]}>
+                            <SymbolView
+                              name={{ ios: 'arrow.triangle.swap', android: 'swap_horiz', web: 'swap_horiz' }}
+                              tintColor={theme.conflict}
+                              size={12}
+                            />
+                            <ThemedText
+                              type="code"
+                              style={[styles.badgeText, { color: theme.conflict }]}>
+                              {sim.conflicts.length} Conflicts
                             </ThemedText>
                           </View>
                         )}
@@ -180,21 +256,30 @@ export default function HistoryScreen() {
                     />
                   </Pressable>
 
-                  {/* Expanded Content */}
+                  {/* Expanded content */}
                   {isExpanded && (
                     <View style={[styles.expandedContent, { borderTopColor: theme.outline }]}>
-                      <ThemedText type="code" themeColor="textSecondary" style={styles.sectionLabel}>
-                        DECISION DESCRIPTION:
-                      </ThemedText>
-                      <ThemedText type="small" style={styles.simDescription}>
-                        {sim.description}
-                      </ThemedText>
+                      {sim.description && (
+                        <>
+                          <ThemedText type="code" themeColor="textSecondary" style={styles.sectionLabel}>
+                            DECISION DESCRIPTION:
+                          </ThemedText>
+                          <ThemedText type="small" style={styles.simDescription}>
+                            {sim.description}
+                          </ThemedText>
+                        </>
+                      )}
 
-                      {/* Blind Spot Alert */}
                       <BlindSpotAlert stakeholderNames={overlookedNames} />
 
-                      {/* Stakeholder List */}
-                      <ThemedText type="code" themeColor="textSecondary" style={[styles.sectionLabel, { marginBottom: Spacing.two }]}>
+                      {sim.conflicts && sim.conflicts.length > 0 && (
+                        <ConflictMap conflicts={sim.conflicts} />
+                      )}
+
+                      <ThemedText
+                        type="code"
+                        themeColor="textSecondary"
+                        style={[styles.sectionLabel, { marginBottom: Spacing.two }]}>
                         STAKEHOLDER EVALUATIONS:
                       </ThemedText>
 
@@ -206,9 +291,29 @@ export default function HistoryScreen() {
                           impact={sh.impact}
                           isOverlooked={sh.isOverlooked}
                           description={sh.description}
-                          onPress={() => openStakeholderDetail(sh)}
+                          onPress={() => openStakeholderDetail(sim, sh)}
                         />
                       ))}
+
+                      {/* Delete button — only for MongoDB-persisted records */}
+                      {sim.mongoId && (
+                        <Pressable
+                          onPress={() => handleDelete(sim)}
+                          style={({ pressed }) => [
+                            styles.deleteButton,
+                            { borderColor: theme.error + '40', backgroundColor: theme.errorContainer },
+                            pressed && { opacity: 0.8 },
+                          ]}>
+                          <SymbolView
+                            name={{ ios: 'trash.fill', android: 'delete', web: 'delete' }}
+                            tintColor={theme.error}
+                            size={14}
+                          />
+                          <ThemedText type="code" style={[styles.deleteText, { color: theme.error }]}>
+                            Delete Record
+                          </ThemedText>
+                        </Pressable>
+                      )}
                     </View>
                   )}
                 </View>
@@ -218,20 +323,18 @@ export default function HistoryScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Bottom Sheet Modal Overlay */}
+      {/* Bottom Sheet Overlay */}
       {selectedStakeholder && (
         <Animated.View
           style={[
             styles.overlay,
-            {
-              backgroundColor: '#000000',
-              opacity: overlayOpacity,
-            },
+            { backgroundColor: '#000000', opacity: overlayOpacity },
           ]}>
           <Pressable style={styles.overlayPressable} onPress={closeStakeholderDetail} />
         </Animated.View>
       )}
 
+      {/* Bottom Sheet */}
       {selectedStakeholder && (
         <Animated.View
           style={[
@@ -242,7 +345,6 @@ export default function HistoryScreen() {
               transform: [{ translateY }],
             },
           ]}>
-          {/* Handle */}
           <View style={styles.sheetHandleContainer}>
             <View style={[styles.sheetHandle, { backgroundColor: theme.outline }]} />
           </View>
@@ -257,7 +359,9 @@ export default function HistoryScreen() {
                   </ThemedText>
                   {selectedStakeholder.isOverlooked && (
                     <View style={[styles.sheetBadge, { backgroundColor: theme.warningContainer }]}>
-                      <ThemedText type="code" style={{ color: theme.warning, fontSize: 10, fontWeight: '700' }}>
+                      <ThemedText
+                        type="code"
+                        style={{ color: theme.warning, fontSize: 10, fontWeight: '700' }}>
                         OVERLOOKED BLIND SPOT
                       </ThemedText>
                     </View>
@@ -275,11 +379,15 @@ export default function HistoryScreen() {
                   { backgroundColor: theme.backgroundElement },
                   pressed && { opacity: 0.8 },
                 ]}>
-                <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} tintColor={theme.text} size={16} />
+                <SymbolView
+                  name={{ ios: 'xmark', android: 'close', web: 'close' }}
+                  tintColor={theme.text}
+                  size={16}
+                />
               </Pressable>
             </View>
 
-            {/* Content Cards */}
+            {/* Impact */}
             <View style={styles.section}>
               <ThemedText type="code" themeColor="textSecondary" style={styles.sectionTitle}>
                 POTENTIAL STRUCTURAL IMPACT:
@@ -289,6 +397,7 @@ export default function HistoryScreen() {
               </ThemedText>
             </View>
 
+            {/* Quote */}
             <View style={styles.section}>
               <ThemedText type="code" themeColor="textSecondary" style={styles.sectionTitle}>
                 GENERATED PERSPECTIVE NARRATIVE:
@@ -306,14 +415,38 @@ export default function HistoryScreen() {
               </View>
             </View>
 
-            {/* Audio Voice Player Component */}
+            {/* Conflicts for this stakeholder */}
+            {selectedSimulation?.conflicts &&
+              selectedSimulation.conflicts.filter(
+                (c) =>
+                  c.groupA === selectedStakeholder.name ||
+                  c.groupB === selectedStakeholder.name
+              ).length > 0 && (
+                <View style={styles.section}>
+                  <ThemedText type="code" themeColor="textSecondary" style={styles.sectionTitle}>
+                    CONFLICT INVOLVEMENT:
+                  </ThemedText>
+                  <ConflictMap
+                    conflicts={selectedSimulation.conflicts.filter(
+                      (c) =>
+                        c.groupA === selectedStakeholder.name ||
+                        c.groupB === selectedStakeholder.name
+                    )}
+                  />
+                </View>
+              )}
+
+            {/* Voice Player */}
             <View style={styles.voiceSection}>
-              <VoicePlayer speakerName={selectedStakeholder.name} />
+              <VoicePlayer
+                speakerName={selectedStakeholder.name}
+                voiceQuote={selectedStakeholder.voiceQuote}
+                voiceArchetype={selectedStakeholder.voiceArchetype ?? 'default'}
+              />
             </View>
 
-            {/* Indian Language Note */}
             <ThemedText type="code" themeColor="textSecondary" style={styles.sarvamNote}>
-              * Voices generated using ElevenLabs high-fidelity cloning. Dynamic translation and speech synthesis is powered by Sarvam AI for multilingual compatibility.
+              * English voices via ElevenLabs. Hindi &amp; Telugu powered by Sarvam AI.
             </ThemedText>
 
             <View style={{ height: BottomTabInset + Spacing.five }} />
@@ -325,12 +458,8 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
   header: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
@@ -339,7 +468,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'transparent',
   },
   brandRow: {
     flexDirection: 'row',
@@ -353,19 +481,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  appName: {
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  appTagline: {
-    fontSize: 8,
-    letterSpacing: 1,
-    fontWeight: '700',
-  },
-  scrollView: {
-    flex: 1,
-  },
+  appName: { fontSize: 18, fontWeight: '700', lineHeight: 20 },
+  appTagline: { fontSize: 8, letterSpacing: 1, fontWeight: '700' },
+  scrollView: { flex: 1 },
   scrollContent: {
     paddingBottom: BottomTabInset + Spacing.five,
     alignItems: 'center',
@@ -379,17 +497,16 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     gap: Spacing.three,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: Spacing.two,
+  title: { fontSize: 24, fontWeight: '700' },
+  description: { fontSize: 14, lineHeight: 20, marginBottom: Spacing.two },
+  emptyCard: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.five,
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   simCard: {
-    borderRadius: 16,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
     marginBottom: Spacing.three,
     overflow: 'hidden',
@@ -400,86 +517,58 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: Spacing.three,
   },
-  simMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  simDate: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  simTitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '700',
-    marginBottom: Spacing.one,
-  },
-  metaBadgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
+  simMeta: { flex: 1, gap: 2 },
+  simDate: { fontSize: 10, fontWeight: '700' },
+  simTitle: { fontSize: 16, lineHeight: 22, fontWeight: '700', marginBottom: Spacing.one },
+  metaBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   metaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: BorderRadius.sm,
     gap: 4,
   },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
+  badgeText: { fontSize: 10, fontWeight: '600' },
   expandedContent: {
     borderTopWidth: 1,
     padding: Spacing.three,
   },
-  sectionLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    marginBottom: Spacing.one,
+  sectionLabel: { fontSize: 10, fontWeight: '700', marginBottom: Spacing.one },
+  simDescription: { fontSize: 14, lineHeight: 20, marginBottom: Spacing.three },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    padding: Spacing.two,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    marginTop: Spacing.two,
   },
-  simDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: Spacing.three,
-  },
+  deleteText: { fontSize: 12, fontWeight: '700' },
   overlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     zIndex: 99,
   },
-  overlayPressable: {
-    flex: 1,
-  },
+  overlayPressable: { flex: 1 },
   bottomSheet: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    bottom: 0, left: 0, right: 0,
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
     borderTopWidth: 1,
     paddingTop: Spacing.two,
     zIndex: 100,
-    maxHeight: '85%',
+    maxHeight: '90%',
   },
   sheetHandleContainer: {
     alignItems: 'center',
     paddingBottom: Spacing.two,
   },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-  },
-  sheetContent: {
-    paddingHorizontal: Spacing.four,
-  },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2 },
+  sheetContent: { paddingHorizontal: Spacing.four },
   sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -487,28 +576,20 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.three,
     gap: Spacing.two,
   },
-  sheetTitleGroup: {
-    flex: 1,
-    gap: 2,
-  },
+  sheetTitleGroup: { flex: 1, gap: 2 },
   sheetNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: Spacing.two,
   },
-  sheetName: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
+  sheetName: { fontSize: 22, fontWeight: '700' },
   sheetBadge: {
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: BorderRadius.sm,
   },
-  sheetRole: {
-    fontSize: 13,
-  },
+  sheetRole: { fontSize: 13 },
   closeButton: {
     width: 32,
     height: 32,
@@ -516,41 +597,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  section: {
-    marginBottom: Spacing.three,
-    gap: Spacing.one,
-  },
-  sectionTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  sheetDesc: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
+  section: { marginBottom: Spacing.three, gap: Spacing.one },
+  sectionTitle: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  sheetDesc: { fontSize: 14, lineHeight: 20 },
   quoteContainer: {
     padding: Spacing.three,
-    borderRadius: 16,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
     flexDirection: 'row',
     gap: Spacing.two,
     alignItems: 'flex-start',
   },
-  quoteIcon: {
-    marginTop: -2,
-  },
-  quoteText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  voiceSection: {
-    marginBottom: Spacing.three,
-  },
-  sarvamNote: {
-    fontSize: 10,
-    lineHeight: 14,
-    textAlign: 'center',
-  },
+  quoteIcon: { marginTop: -2 },
+  quoteText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  voiceSection: { marginBottom: Spacing.three },
+  sarvamNote: { fontSize: 10, lineHeight: 14, textAlign: 'center' },
 });

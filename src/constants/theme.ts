@@ -1,6 +1,6 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Echo design system — Material 3-inspired tokens.
+ * All colors, typography, spacing, and border radius constants used throughout the app.
  */
 
 import '@/global.css';
@@ -19,9 +19,13 @@ export const Colors = {
     outline: '#DADCE0',
     surface: '#FFFFFF',
     error: '#B3261E',
+    errorContainer: '#FFDAD6',
     success: '#146C36',
+    successContainer: '#C8F5D5',
     warning: '#B06000',
     warningContainer: '#FFEAC2',
+    conflict: '#C0392B',
+    conflictContainer: '#FADBD8',
     inputBackground: '#FFFFFF',
     border: '#E0E0E0',
   },
@@ -36,9 +40,13 @@ export const Colors = {
     outline: '#444746',
     surface: '#1E1F20',
     error: '#F2B8B5',
+    errorContainer: '#8C1D18',
     success: '#37BE5F',
+    successContainer: '#0A3D20',
     warning: '#FFB85F',
     warningContainer: '#4B3000',
+    conflict: '#F1948A',
+    conflictContainer: '#641E16',
     inputBackground: '#1E1F20',
     border: '#3C4043',
   },
@@ -48,13 +56,10 @@ export type ThemeColor = keyof typeof Colors.light;
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
+    /** iOS system default sans-serif */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
@@ -71,6 +76,7 @@ export const Fonts = Platform.select({
   },
 });
 
+/** 4pt grid spacing system */
 export const Spacing = {
   half: 2,
   one: 4,
@@ -79,6 +85,28 @@ export const Spacing = {
   four: 24,
   five: 32,
   six: 64,
+} as const;
+
+/** Consistent border radius tokens */
+export const BorderRadius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  pill: 28,
+  full: 9999,
+} as const;
+
+/** Typography scale (font sizes) */
+export const FontSize = {
+  xs: 10,
+  sm: 12,
+  base: 14,
+  md: 16,
+  lg: 18,
+  xl: 22,
+  xxl: 24,
+  display: 32,
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;

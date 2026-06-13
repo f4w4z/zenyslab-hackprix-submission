@@ -1,27 +1,55 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  Easing,
+} from 'react-native-reanimated';
 import { SymbolView } from 'expo-symbols';
 
 import { ThemedText } from './themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import { Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing } from '@/constants/theme';
 
 export interface BlindSpotAlertProps {
   stakeholderNames: string[];
 }
 
+/**
+ * Animated alert banner that surfaces overlooked stakeholder groups.
+ * Slides down + fades in when first rendered, drawing immediate attention
+ * to the blind spots detected by Gemini.
+ */
 export function BlindSpotAlert({ stakeholderNames }: BlindSpotAlertProps) {
   const theme = useTheme();
+
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(-16);
+
+  useEffect(() => {
+    if (stakeholderNames.length > 0) {
+      opacity.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.ease) });
+      translateY.value = withSpring(0, { damping: 18, stiffness: 200 });
+    }
+  }, [stakeholderNames.length]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
 
   if (stakeholderNames.length === 0) return null;
 
   return (
-    <View
+    <Animated.View
       style={[
+        animatedStyle,
         styles.container,
         {
           backgroundColor: theme.warningContainer,
-          borderColor: theme.warning + '33', // 20% opacity border
+          borderColor: theme.warning + '40',
         },
       ]}>
       <View style={styles.header}>
@@ -30,14 +58,15 @@ export function BlindSpotAlert({ stakeholderNames }: BlindSpotAlertProps) {
           tintColor={theme.warning}
           size={20}
         />
-        <ThemedText type="smallBold" style={[styles.title, { color: theme.warning }]}>
-          Decision Blind Spots Detected
-        </ThemedText>
+        <View style={styles.headerText}>
+          <ThemedText type="smallBold" style={[styles.title, { color: theme.warning }]}>
+            {stakeholderNames.length} Blind Spot{stakeholderNames.length > 1 ? 's' : ''} Detected
+          </ThemedText>
+          <ThemedText type="small" style={[styles.subtitle, { color: theme.warning + 'CC' }]}>
+            Groups not considered in the original proposal
+          </ThemedText>
+        </View>
       </View>
-
-      <ThemedText type="small" style={[styles.description, { color: theme.textSecondary }]}>
-        Echo simulated potential impacts and discovered {stakeholderNames.length} affected stakeholder groups not identified in your proposal.
-      </ThemedText>
 
       <View style={styles.chipContainer}>
         {stakeholderNames.map((name, index) => (
@@ -53,7 +82,7 @@ export function BlindSpotAlert({ stakeholderNames }: BlindSpotAlertProps) {
             <SymbolView
               name={{ ios: 'eye.slash.fill', android: 'visibility_off', web: 'visibility_off' }}
               tintColor={theme.warning}
-              size={12}
+              size={11}
             />
             <ThemedText type="code" style={[styles.chipText, { color: theme.text }]}>
               {name}
@@ -61,31 +90,34 @@ export function BlindSpotAlert({ stakeholderNames }: BlindSpotAlertProps) {
           </View>
         ))}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     padding: Spacing.three,
-    borderRadius: 16,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
     alignSelf: 'stretch',
-    marginBottom: Spacing.four,
+    marginBottom: Spacing.three,
     gap: Spacing.two,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: Spacing.two,
   },
+  headerText: {
+    flex: 1,
+    gap: 1,
+  },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
-  description: {
-    fontSize: 13,
-    lineHeight: 18,
+  subtitle: {
+    fontSize: 12,
   },
   chipContainer: {
     flexDirection: 'row',
@@ -98,7 +130,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
-    borderRadius: 8,
+    borderRadius: BorderRadius.sm,
     borderWidth: 1,
     gap: Spacing.one,
   },

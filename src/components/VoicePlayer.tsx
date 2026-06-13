@@ -1,68 +1,213 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * VoicePlayer — plays stakeholder voice audio using expo-av.
+ *
+ * - English: ElevenLabs (direct TTS, unique voice per archetype)
+ * - Hindi / Telugu: Sarvam AI (translate → TTS)
+ *
+ * Audio flow:
+ *   1. User taps Play or selects a language
+ *   2. API call fetches base64 audio
+ *   3. Audio written to expo-file-system cache
+ *   4. expo-av Audio object plays the cached file
+ */
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system/legacy';
 import { SymbolView } from 'expo-symbols';
 
 import { ThemedText } from './themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import { Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing } from '@/constants/theme';
+import { VoiceArchetype } from '@/constants/mockData';
+import { generateVoice } from '@/services/elevenlabs';
+import { translateAndSpeak, SarvamLanguage, SARVAM_LANGUAGE_LABELS } from '@/services/sarvam';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type PlayerLanguage = 'English' | SarvamLanguage;
+type PlayerState = 'idle' | 'loading' | 'playing' | 'paused' | 'error';
+
+interface LanguageOption {
+  key: PlayerLanguage;
+  label: string;
+  flag: string;
+}
+
+const LANGUAGE_OPTIONS: LanguageOption[] = [
+  { key: 'English', label: 'English', flag: '🇬🇧' },
+  { key: 'hi-IN', label: 'हिंदी', flag: '🇮🇳' },
+  { key: 'te-IN', label: 'తెలుగు', flag: '🇮🇳' },
+];
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
 
 export interface VoicePlayerProps {
   speakerName: string;
-  languages?: string[];
-  initialLanguage?: string;
-  onLanguageChange?: (lang: string) => void;
+  voiceQuote: string;
+  voiceArchetype?: VoiceArchetype;
 }
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function VoicePlayer({
   speakerName,
-  languages = ['English', 'Hindi (हिंदी)', 'Tamil (தமிழ்)', 'Bengali (বাংলা)'],
-  initialLanguage = 'English',
-  onLanguageChange,
+  voiceQuote,
+  voiceArchetype = 'default',
 }: VoicePlayerProps) {
   const theme = useTheme();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0); // 0 to 100
-  const [selectedLang, setSelectedLang] = useState(initialLanguage);
 
+  const [selectedLang, setSelectedLang] = useState<PlayerLanguage>('English');
+  const [playerState, setPlayerState] = useState<PlayerState>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [position, setPosition] = useState(0);   // milliseconds
+  const [duration, setDuration] = useState(0);   // milliseconds
+
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  // Cleanup audio on unmount
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return prev + 5; // increment progress
-        });
-      }, 500);
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
+      }
+    };
+  }, []);
+
+  // Unload when language changes
+  const resetPlayer = useCallback(async () => {
+    if (soundRef.current) {
+      await soundRef.current.unloadAsync().catch(() => {});
+      soundRef.current = null;
     }
-    return () => clearInterval(interval);
-  }, [isPlaying]);
+    setPlayerState('idle');
+    setPosition(0);
+    setDuration(0);
+    setErrorMessage(null);
+  }, []);
 
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-  };
-
-  const selectLanguage = (lang: string) => {
+  const handleLanguageSelect = async (lang: PlayerLanguage) => {
+    if (lang === selectedLang) return;
+    await resetPlayer();
     setSelectedLang(lang);
-    setProgress(0);
-    setIsPlaying(false);
-    if (onLanguageChange) {
-      onLanguageChange(lang);
+  };
+
+  const fetchAudio = async (lang: PlayerLanguage): Promise<string> => {
+    // ElevenLabs for English
+    if (lang === 'English') {
+      const base64 = await generateVoice(voiceQuote, voiceArchetype);
+      return base64;
+    }
+    // Sarvam AI for Hindi / Telugu
+    const base64 = await translateAndSpeak(voiceQuote, lang as SarvamLanguage);
+    return base64;
+  };
+
+  const loadAndPlay = async () => {
+    setPlayerState('loading');
+    setErrorMessage(null);
+
+    try {
+      // Configure audio session (important for iOS)
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+
+      // Fetch base64 audio from API
+      const base64Audio = await fetchAudio(selectedLang);
+
+      // Determine file extension based on language
+      // ElevenLabs returns MP3, Sarvam returns WAV
+      const isEnglish = selectedLang === 'English';
+      const ext = isEnglish ? 'mp3' : 'wav';
+      const cacheUri = `${FileSystem.cacheDirectory}echo_voice_${Date.now()}.${ext}`;
+
+      // Write to filesystem cache
+      await FileSystem.writeAsStringAsync(cacheUri, base64Audio, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Load into expo-av
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: cacheUri },
+        { shouldPlay: true },
+        (status) => {
+          if (!status.isLoaded) return;
+          setPosition(status.positionMillis ?? 0);
+          setDuration(status.durationMillis ?? 0);
+          if (status.didJustFinish) {
+            setPlayerState('idle');
+            setPosition(0);
+          }
+        }
+      );
+
+      soundRef.current = sound;
+      setPlayerState('playing');
+    } catch (error: any) {
+      console.error('VoicePlayer error:', error);
+      setPlayerState('error');
+      setErrorMessage(
+        error?.message?.includes('Missing EXPO_PUBLIC')
+          ? 'API key not configured. Add your .env keys to hear voices.'
+          : 'Failed to load audio. Please try again.'
+      );
     }
   };
 
-  // Format progress seconds
-  const currentSeconds = Math.floor((progress / 100) * 15);
-  const formatTime = (sec: number) => `0:${sec < 10 ? '0' : ''}${sec}`;
+  const handlePlayPause = async () => {
+    if (playerState === 'loading') return;
+
+    if (playerState === 'idle' || playerState === 'error') {
+      await loadAndPlay();
+      return;
+    }
+
+    if (!soundRef.current) return;
+
+    if (playerState === 'playing') {
+      await soundRef.current.pauseAsync();
+      setPlayerState('paused');
+    } else if (playerState === 'paused') {
+      await soundRef.current.playAsync();
+      setPlayerState('playing');
+    }
+  };
+
+  // Progress percentage (0 to 100)
+  const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
+
+  const formatTime = (ms: number) => {
+    const totalSecs = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const playIcon =
+    playerState === 'loading'
+      ? { ios: 'ellipsis.circle.fill', android: 'hourglass_empty', web: 'hourglass_empty' }
+      : playerState === 'playing'
+        ? { ios: 'pause.fill', android: 'pause', web: 'pause' }
+        : { ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundElement }]}>
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.voiceInfo}>
           <SymbolView
-            name={{ ios: 'waveform.circle.fill', android: 'record_voice_over', web: 'record_voice_over' }}
+            name={{ ios: 'waveform.circle.fill', android: 'graphic_eq', web: 'graphic_eq' }}
             tintColor={theme.primary}
             size={18}
           />
@@ -70,24 +215,24 @@ export function VoicePlayer({
             {speakerName}&apos;s Voice
           </ThemedText>
         </View>
-        <View style={styles.brandBadge}>
-          <ThemedText type="code" style={[styles.brandText, { color: theme.primary }]}>
-            Sarvam AI & ElevenLabs
+        <View style={[styles.brandBadge, { backgroundColor: theme.surface }]}>
+          <ThemedText type="code" style={[styles.brandText, { color: theme.textSecondary }]}>
+            {selectedLang === 'English' ? 'ElevenLabs' : 'Sarvam AI'}
           </ThemedText>
         </View>
       </View>
 
       {/* Language Selector */}
       <ThemedText type="code" themeColor="textSecondary" style={styles.sectionLabel}>
-        SELECT NARRATION LANGUAGE:
+        SELECT LANGUAGE:
       </ThemedText>
-      <View style={styles.langList}>
-        {languages.map((lang) => {
-          const isSelected = selectedLang === lang;
+      <View style={styles.langRow}>
+        {LANGUAGE_OPTIONS.map((option) => {
+          const isSelected = selectedLang === option.key;
           return (
             <Pressable
-              key={lang}
-              onPress={() => selectLanguage(lang)}
+              key={option.key}
+              onPress={() => handleLanguageSelect(option.key)}
               style={[
                 styles.langChip,
                 {
@@ -95,34 +240,33 @@ export function VoicePlayer({
                   borderColor: isSelected ? theme.primary : theme.outline,
                 },
               ]}>
+              <ThemedText style={styles.flag}>{option.flag}</ThemedText>
               <ThemedText
                 type="code"
                 style={[
                   styles.langChipText,
                   { color: isSelected ? theme.surface : theme.text },
                 ]}>
-                {lang.split(' ')[0]}
+                {option.label}
               </ThemedText>
             </Pressable>
           );
         })}
       </View>
 
-      {/* Audio Controls */}
+      {/* Player Controls */}
       <View style={styles.playerRow}>
         <Pressable
           onPress={handlePlayPause}
+          disabled={playerState === 'loading'}
           style={({ pressed }) => [
             styles.playButton,
-            { backgroundColor: theme.primary },
-            pressed && { opacity: 0.9 },
+            { backgroundColor: playerState === 'error' ? theme.error : theme.primary },
+            pressed && { opacity: 0.85 },
+            playerState === 'loading' && { opacity: 0.6 },
           ]}>
           <SymbolView
-            name={{
-              ios: isPlaying ? 'pause.fill' : 'play.fill',
-              android: isPlaying ? 'pause' : 'play_arrow',
-              web: isPlaying ? 'pause' : 'play_arrow',
-            }}
+            name={playIcon as any}
             tintColor={theme.surface}
             size={20}
           />
@@ -133,20 +277,37 @@ export function VoicePlayer({
             <View
               style={[
                 styles.progressBarFill,
-                { backgroundColor: theme.primary, width: `${progress}%` },
+                {
+                  backgroundColor: playerState === 'error' ? theme.error : theme.primary,
+                  width: `${progressPercent}%`,
+                },
               ]}
             />
           </View>
           <View style={styles.timeRow}>
             <ThemedText type="code" themeColor="textSecondary" style={styles.timeText}>
-              {formatTime(currentSeconds)}
+              {formatTime(position)}
             </ThemedText>
             <ThemedText type="code" themeColor="textSecondary" style={styles.timeText}>
-              0:15
+              {duration > 0 ? formatTime(duration) : '--:--'}
             </ThemedText>
           </View>
         </View>
       </View>
+
+      {/* Error State */}
+      {playerState === 'error' && errorMessage && (
+        <View style={[styles.errorBox, { backgroundColor: theme.errorContainer }]}>
+          <SymbolView
+            name={{ ios: 'exclamationmark.circle.fill', android: 'error', web: 'error' }}
+            tintColor={theme.error}
+            size={14}
+          />
+          <ThemedText type="code" style={[styles.errorText, { color: theme.error }]}>
+            {errorMessage}
+          </ThemedText>
+        </View>
+      )}
     </View>
   );
 }
@@ -154,7 +315,7 @@ export function VoicePlayer({
 const styles = StyleSheet.create({
   container: {
     padding: Spacing.three,
-    borderRadius: 16,
+    borderRadius: BorderRadius.lg,
     alignSelf: 'stretch',
     gap: Spacing.two,
   },
@@ -162,7 +323,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.one,
   },
   voiceInfo: {
     flexDirection: 'row',
@@ -175,7 +335,7 @@ const styles = StyleSheet.create({
   brandBadge: {
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: BorderRadius.sm,
   },
   brandText: {
     fontSize: 9,
@@ -185,18 +345,24 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     marginTop: Spacing.one,
+    letterSpacing: 0.5,
   },
-  langList: {
+  langRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.one,
-    marginBottom: Spacing.two,
+    gap: Spacing.two,
   },
   langChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
-    borderRadius: 8,
+    borderRadius: BorderRadius.sm,
     borderWidth: 1,
+    gap: 4,
+  },
+  flag: {
+    fontSize: 14,
   },
   langChipText: {
     fontSize: 11,
@@ -206,13 +372,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+    marginTop: Spacing.one,
   },
   playButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   progressSection: {
     flex: 1,
@@ -234,5 +402,19 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 10,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.one,
+    padding: Spacing.two,
+    borderRadius: BorderRadius.sm,
+    marginTop: Spacing.one,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '600',
   },
 });
