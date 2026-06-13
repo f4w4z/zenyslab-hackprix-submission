@@ -13,7 +13,7 @@
 import { ConflictPair, SimulationRecord, Stakeholder, VoiceArchetype } from '@/constants/mockData';
 
 const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 const GEMINI_SYSTEM_INSTRUCTION = `You are Echo, an AI-powered Decision Blind Spot Detector.
 Your task is to analyse a proposed organisational, institutional, or governmental decision and:
