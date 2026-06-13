@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
 
   Animated,
@@ -22,7 +22,7 @@ import { VoicePlayer } from '@/components/VoicePlayer';
 import { ConflictMap } from '@/components/ConflictMap';
 import { MOCK_SIMULATIONS, SimulationRecord, Stakeholder } from '@/constants/mockData';
 import { useTheme } from '@/hooks/use-theme';
-import { BorderRadius, BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BorderRadius, BottomTabInset, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { AnalysisLoader } from '@/components/AnalysisLoader';
 import { analyzeDecision } from '@/services/gemini';
 import { saveSimulation } from '@/services/mongodb';
@@ -42,6 +42,7 @@ export default function HomeScreen() {
 
   // Core state
   const [proposalText, setProposalText] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [currentSimulation, setCurrentSimulation] = useState<SimulationRecord | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null);
@@ -50,7 +51,7 @@ export default function HomeScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Bottom sheet animation
-  const bottomSheetAnim = useRef(new Animated.Value(0)).current;
+  const [bottomSheetAnim] = useState(() => new Animated.Value(0));
 
   // ---------------------------------------------------------------------------
   // Bottom sheet helpers
@@ -230,8 +231,13 @@ export default function HomeScreen() {
                   style={[
                     styles.inputContainer,
                     {
-                      borderColor: isOverLimit ? theme.error : theme.outline,
+                      borderColor: isOverLimit
+                        ? theme.error
+                        : isInputFocused
+                          ? theme.primary
+                          : theme.outline,
                       backgroundColor: theme.inputBackground,
+                      borderWidth: isInputFocused ? 1.5 : 1,
                     },
                   ]}>
                   <TextInput
@@ -242,6 +248,8 @@ export default function HomeScreen() {
                     numberOfLines={4}
                     value={proposalText}
                     onChangeText={setProposalText}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                     maxLength={MAX_PROPOSAL_CHARS + 50} // allow slightly over for visual feedback
                   />
                   {/* Character counter */}
@@ -323,8 +331,8 @@ export default function HomeScreen() {
                       onPress={() => loadTemplate(template.text)}
                       style={({ pressed }) => [
                         styles.templateButton,
-                        { borderColor: theme.outline, backgroundColor: theme.surface },
-                        pressed && { backgroundColor: theme.backgroundElement },
+                        { borderBottomColor: theme.outline },
+                        pressed && { backgroundColor: theme.backgroundElement, borderRadius: BorderRadius.md },
                       ]}>
                       <SymbolView
                         name={template.icon as any}
@@ -600,8 +608,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  appName: { fontSize: 18, fontWeight: '700', lineHeight: 20 },
-  appTagline: { fontSize: 8, letterSpacing: 1, fontWeight: '700' },
+  appName: { fontFamily: Fonts.serif.regular, fontSize: 24, lineHeight: 26 },
+  appTagline: { fontFamily: Fonts.sans.bold, fontSize: 8, letterSpacing: 1, fontWeight: '700' },
   headerResetButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -625,7 +633,7 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     gap: Spacing.three,
   },
-  welcomeTitle: { fontSize: 24, fontWeight: '700' },
+  welcomeTitle: { fontFamily: Fonts.serif.regular, fontSize: 28, lineHeight: 34, fontWeight: '400' },
   welcomeDesc: { fontSize: 14, lineHeight: 20, marginBottom: Spacing.two },
   inputContainer: {
     borderRadius: BorderRadius.lg,
@@ -665,9 +673,9 @@ const styles = StyleSheet.create({
   templateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.three,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.two,
+    borderBottomWidth: 1,
     gap: Spacing.three,
   },
   templateButtonText: { fontSize: 14, fontWeight: '600' },
@@ -679,7 +687,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
-  errorTitle: { fontSize: 18, fontWeight: '700' },
+  errorTitle: { fontFamily: Fonts.serif.regular, fontSize: 22, lineHeight: 26, fontWeight: '400' },
   errorDesc: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
   retryButton: {
     paddingVertical: Spacing.two,
@@ -736,7 +744,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
     paddingHorizontal: Spacing.one,
   },
-  directoryTitle: { fontSize: 16, fontWeight: '700' },
+  directoryTitle: { fontFamily: Fonts.serif.regular, fontSize: 22, lineHeight: 26, fontWeight: '400' },
   // Bottom sheet
   overlay: {
     position: 'absolute',
@@ -750,11 +758,14 @@ const styles = StyleSheet.create({
   bottomSheet: {
     position: 'absolute',
     bottom: 0,
-    left: 0,
-    right: 0,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: MaxContentWidth,
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     borderTopWidth: 1,
+    borderLeftWidth: Platform.select({ web: 1, default: 0 }),
+    borderRightWidth: Platform.select({ web: 1, default: 0 }),
     paddingTop: Spacing.two,
     zIndex: 100,
     maxHeight: '90%',
@@ -779,7 +790,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.two,
   },
-  sheetName: { fontSize: 22, fontWeight: '700' },
+  sheetName: { fontFamily: Fonts.serif.regular, fontSize: 28, lineHeight: 34, fontWeight: '400' },
   sheetBadge: {
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,

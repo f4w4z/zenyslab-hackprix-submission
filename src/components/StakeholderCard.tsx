@@ -1,11 +1,11 @@
+/* eslint-disable react-hooks/immutability */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { Pressable } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
 import { ThemedText } from './themed-text';
@@ -89,17 +89,17 @@ export function StakeholderCard({
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={[
+        style={({ pressed }) => [
           styles.card,
           {
-            backgroundColor: theme.surface,
-            borderColor: isOverlooked ? theme.warning : theme.outline,
-            borderWidth: isOverlooked ? 1.5 : 1,
+            borderBottomColor: theme.outline,
           },
+          pressed && { backgroundColor: theme.backgroundElement, borderRadius: BorderRadius.md },
         ]}>
         <View style={styles.cardHeader}>
           <View style={styles.titleContainer}>
             <View style={styles.nameRow}>
+              <View style={[styles.statusDot, { backgroundColor: impactText }]} />
               <ThemedText type="smallBold" style={styles.nameText}>
                 {name}
               </ThemedText>
@@ -165,10 +165,17 @@ export function StakeholderCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.three,
-    marginBottom: Spacing.three,
+    paddingVertical: Spacing.four,
+    paddingHorizontal: Spacing.three,
+    borderBottomWidth: 1,
     alignSelf: 'stretch',
+    gap: Spacing.one,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: Spacing.one,
   },
   cardHeader: {
     flexDirection: 'row',

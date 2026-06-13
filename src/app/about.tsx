@@ -6,7 +6,7 @@ import { SymbolView } from 'expo-symbols';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
-import { BottomTabInset, BorderRadius, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, BorderRadius, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 
 interface TechCardProps {
   name: string;
@@ -23,10 +23,9 @@ function TechCard({ name, description, iconName, url }: TechCardProps) {
       style={({ pressed }) => [
         styles.techCard,
         {
-          backgroundColor: theme.surface,
-          borderColor: theme.outline,
+          borderBottomColor: theme.outline,
         },
-        pressed && { opacity: 0.8 },
+        pressed && { backgroundColor: theme.backgroundElement, borderRadius: BorderRadius.md },
       ]}>
       <View style={[styles.techIconWrap, { backgroundColor: theme.primaryContainer }]}>
         <SymbolView name={iconName as any} tintColor={theme.primary} size={20} />
@@ -121,7 +120,7 @@ export default function AboutScreen() {
             ].map((item) => (
               <View
                 key={item.title}
-                style={[styles.featureRow, { borderColor: theme.outline, backgroundColor: theme.surface }]}>
+                style={[styles.featureRow, { borderBottomColor: theme.outline }]}>
                 <View style={[styles.featureIcon, { backgroundColor: theme.primaryContainer }]}>
                   <SymbolView name={item.icon as any} tintColor={theme.primary} size={18} />
                 </View>
@@ -173,7 +172,7 @@ export default function AboutScreen() {
             />
 
             {/* Philosophy */}
-            <View style={[styles.philosophyCard, { backgroundColor: theme.backgroundElement, borderColor: theme.outline }]}>
+            <View style={[styles.philosophyCard, { borderLeftColor: theme.primary }]}>
               <ThemedText type="code" themeColor="textSecondary" style={styles.philosophyLabel}>
                 OUR VISION
               </ThemedText>
@@ -218,11 +217,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   appName: {
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 20,
+    fontFamily: Fonts.serif.regular,
+    fontSize: 24,
+    lineHeight: 26,
   },
   appTagline: {
+    fontFamily: Fonts.sans.bold,
     fontSize: 8,
     letterSpacing: 1,
     fontWeight: '700',
@@ -247,9 +247,10 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   heroTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    lineHeight: 28,
+    fontFamily: Fonts.serif.regular,
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '400',
   },
   heroBody: {
     fontSize: 14,
@@ -257,8 +258,10 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontFamily: Fonts.serif.regular,
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '400',
     marginBottom: Spacing.two,
     marginTop: Spacing.one,
   },

@@ -44,27 +44,30 @@ export function ConflictMap({ conflicts }: ConflictMapProps) {
               borderColor: theme.conflict + '30',
             },
           ]}>
-          {/* Group A */}
-          <View style={[styles.groupChip, { backgroundColor: theme.surface }]}>
-            <ThemedText type="smallBold" style={[styles.groupName, { color: theme.conflict }]}>
-              {conflict.groupA}
-            </ThemedText>
-          </View>
+          {/* Connection flow row */}
+          <View style={styles.flowRow}>
+            {/* Group A */}
+            <View style={[styles.groupChip, { backgroundColor: theme.surface, borderColor: theme.conflict + '20' }]}>
+              <ThemedText type="smallBold" style={[styles.groupName, { color: theme.conflict }]}>
+                {conflict.groupA}
+              </ThemedText>
+            </View>
 
-          {/* Arrow */}
-          <View style={styles.arrowWrap}>
-            <SymbolView
-              name={{ ios: 'arrow.left.and.right', android: 'compare_arrows', web: 'compare_arrows' }}
-              tintColor={theme.conflict}
-              size={14}
-            />
-          </View>
+            {/* Arrow */}
+            <View style={styles.arrowWrap}>
+              <SymbolView
+                name={{ ios: 'arrow.left.and.right', android: 'compare_arrows', web: 'compare_arrows' }}
+                tintColor={theme.conflict}
+                size={14}
+              />
+            </View>
 
-          {/* Group B */}
-          <View style={[styles.groupChip, { backgroundColor: theme.surface }]}>
-            <ThemedText type="smallBold" style={[styles.groupName, { color: theme.conflict }]}>
-              {conflict.groupB}
-            </ThemedText>
+            {/* Group B */}
+            <View style={[styles.groupChip, { backgroundColor: theme.surface, borderColor: theme.conflict + '20' }]}>
+              <ThemedText type="smallBold" style={[styles.groupName, { color: theme.conflict }]}>
+                {conflict.groupB}
+              </ThemedText>
+            </View>
           </View>
 
           {/* Reason */}
@@ -101,14 +104,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: Spacing.three,
     gap: Spacing.two,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  flowRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
+    gap: Spacing.two,
+    flexWrap: 'wrap',
   },
   groupChip: {
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
     borderRadius: BorderRadius.sm,
+    borderWidth: 1,
     flexShrink: 1,
   },
   groupName: {
@@ -117,11 +131,13 @@ const styles = StyleSheet.create({
   },
   arrowWrap: {
     flexShrink: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   reason: {
     fontSize: 13,
     lineHeight: 18,
-    flexBasis: '100%',
     opacity: 0.85,
+    marginTop: Spacing.one / 2,
   },
 });

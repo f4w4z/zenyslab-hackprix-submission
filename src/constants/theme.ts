@@ -54,27 +54,19 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS system default sans-serif */
-    sans: 'system-ui',
-    serif: 'ui-serif',
-    rounded: 'ui-rounded',
-    mono: 'ui-monospace',
+export const Fonts = {
+  sans: {
+    regular: Platform.select({ web: 'var(--font-display)', default: 'Inter-Regular' }),
+    medium: Platform.select({ web: 'var(--font-display)', default: 'Inter-Medium' }),
+    semibold: Platform.select({ web: 'var(--font-display)', default: 'Inter-SemiBold' }),
+    bold: Platform.select({ web: 'var(--font-display)', default: 'Inter-Bold' }),
   },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+  serif: {
+    regular: Platform.select({ web: 'var(--font-serif)', default: 'InstrumentSerif-Regular' }),
+    italic: Platform.select({ web: 'var(--font-serif)', default: 'InstrumentSerif-Italic' }),
   },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+  mono: Platform.select({ web: 'var(--font-mono)', default: 'monospace' }),
+};
 
 /** 4pt grid spacing system */
 export const Spacing = {

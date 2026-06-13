@@ -33,7 +33,7 @@ export function BlindSpotAlert({ stakeholderNames }: BlindSpotAlertProps) {
       opacity.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.ease) });
       translateY.value = withSpring(0, { damping: 18, stiffness: 200 });
     }
-  }, [stakeholderNames.length]);
+  }, [stakeholderNames.length, opacity, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -52,6 +52,7 @@ export function BlindSpotAlert({ stakeholderNames }: BlindSpotAlertProps) {
           borderColor: theme.warning + '40',
         },
       ]}>
+      <View style={[styles.leftAccentBar, { backgroundColor: theme.warning }]} />
       <View style={styles.header}>
         <SymbolView
           name={{ ios: 'exclamationmark.triangle.fill', android: 'warning', web: 'warning' }}
@@ -96,12 +97,27 @@ export function BlindSpotAlert({ stakeholderNames }: BlindSpotAlertProps) {
 
 const styles = StyleSheet.create({
   container: {
-    padding: Spacing.three,
+    paddingVertical: Spacing.three,
+    paddingRight: Spacing.three,
+    paddingLeft: Spacing.four + 2,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
     alignSelf: 'stretch',
     marginBottom: Spacing.three,
     gap: Spacing.two,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  leftAccentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 5,
   },
   header: {
     flexDirection: 'row',

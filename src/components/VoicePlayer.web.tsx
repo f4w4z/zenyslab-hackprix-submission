@@ -17,7 +17,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { VoiceArchetype } from '@/constants/mockData';
 import { generateVoice } from '@/services/elevenlabs';
-import { translateAndSpeak, SarvamLanguage, SARVAM_LANGUAGE_LABELS } from '@/services/sarvam';
+import { translateAndSpeak, SarvamLanguage } from '@/services/sarvam';
 
 // ---------------------------------------------------------------------------
 // Types (must match VoicePlayer.tsx exactly)
@@ -204,7 +204,7 @@ export function VoicePlayer({
         : { ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundElement }]}>
+    <View style={[styles.container, { backgroundColor: theme.backgroundElement, borderColor: theme.outline }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.voiceInfo}>
@@ -228,19 +228,19 @@ export function VoicePlayer({
       <ThemedText type="code" themeColor="textSecondary" style={styles.sectionLabel}>
         SELECT LANGUAGE:
       </ThemedText>
-      <View style={styles.langRow}>
+      <View style={[styles.langRow, { backgroundColor: theme.background, borderColor: theme.outline }]}>
         {LANGUAGE_OPTIONS.map((option) => {
           const isSelected = selectedLang === option.key;
           return (
             <Pressable
               key={option.key}
               onPress={() => handleLanguageSelect(option.key)}
-              style={[
+              style={({ pressed }) => [
                 styles.langChip,
                 {
-                  backgroundColor: isSelected ? theme.primary : theme.surface,
-                  borderColor: isSelected ? theme.primary : theme.outline,
+                  backgroundColor: isSelected ? theme.primary : 'transparent',
                 },
+                pressed && { opacity: 0.8 },
               ]}>
               <ThemedText style={styles.flag}>{option.flag}</ThemedText>
               <ThemedText
@@ -316,10 +316,16 @@ export function VoicePlayer({
 
 const styles = StyleSheet.create({
   container: {
-    padding: Spacing.three,
-    borderRadius: BorderRadius.lg,
+    padding: Spacing.four,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
     alignSelf: 'stretch',
-    gap: Spacing.two,
+    gap: Spacing.three,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   header: {
     flexDirection: 'row',
@@ -346,16 +352,18 @@ const styles = StyleSheet.create({
   },
   langRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
+    borderRadius: BorderRadius.md,
+    padding: 2,
+    borderWidth: 1,
+    alignSelf: 'stretch',
   },
   langChip: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
+    justifyContent: 'center',
+    paddingVertical: Spacing.two,
+    borderRadius: BorderRadius.sm - 2,
     gap: 4,
   },
   flag: { fontSize: 14 },
@@ -367,12 +375,17 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
   },
   playButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   progressSection: { flex: 1, gap: Spacing.one },
   progressBarBg: {

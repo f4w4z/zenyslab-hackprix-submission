@@ -1,6 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Animated,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,7 +20,7 @@ import { ConflictMap } from '@/components/ConflictMap';
 import { VoicePlayer } from '@/components/VoicePlayer';
 import { MOCK_SIMULATIONS, SimulationRecord, Stakeholder } from '@/constants/mockData';
 import { useTheme } from '@/hooks/use-theme';
-import { BorderRadius, BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BorderRadius, BottomTabInset, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { listSimulations, deleteSimulation } from '@/services/mongodb';
 
 export default function HistoryScreen() {
@@ -30,7 +32,7 @@ export default function HistoryScreen() {
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null);
   const [selectedSimulation, setSelectedSimulation] = useState<SimulationRecord | null>(null);
 
-  const bottomSheetAnim = useRef(new Animated.Value(0)).current;
+  const [bottomSheetAnim] = useState(() => new Animated.Value(0));
 
   // Load simulations from MongoDB on mount (fall back to mock data)
   const loadHistory = useCallback(async () => {
@@ -156,7 +158,7 @@ export default function HistoryScreen() {
             </ThemedText>
 
             {simulations.length === 0 && !isRefreshing && (
-              <View style={[styles.emptyCard, { backgroundColor: theme.backgroundElement }]}>
+              <View style={styles.emptyCard}>
                 <SymbolView
                   name={{ ios: 'tray', android: 'inbox', web: 'inbox' }}
                   tintColor={theme.textSecondary}
@@ -184,9 +186,7 @@ export default function HistoryScreen() {
                   style={[
                     styles.simCard,
                     {
-                      backgroundColor: theme.surface,
-                      borderColor: isExpanded ? theme.primary : theme.outline,
-                      borderWidth: isExpanded ? 1.5 : 1,
+                      borderBottomColor: theme.outline,
                     },
                   ]}>
                   {/* Collapsible header */}
@@ -258,7 +258,7 @@ export default function HistoryScreen() {
 
                   {/* Expanded content */}
                   {isExpanded && (
-                    <View style={[styles.expandedContent, { borderTopColor: theme.outline }]}>
+                    <View style={[styles.expandedContent, { backgroundColor: theme.backgroundElement }]}>
                       {sim.description && (
                         <>
                           <ThemedText type="code" themeColor="textSecondary" style={styles.sectionLabel}>
@@ -481,8 +481,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  appName: { fontSize: 18, fontWeight: '700', lineHeight: 20 },
-  appTagline: { fontSize: 8, letterSpacing: 1, fontWeight: '700' },
+  appName: { fontFamily: Fonts.serif.regular, fontSize: 24, lineHeight: 26 },
+  appTagline: { fontFamily: Fonts.sans.bold, fontSize: 8, letterSpacing: 1, fontWeight: '700' },
   scrollView: { flex: 1 },
   scrollContent: {
     paddingBottom: BottomTabInset + Spacing.five,
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     gap: Spacing.three,
   },
-  title: { fontSize: 24, fontWeight: '700' },
+  title: { fontFamily: Fonts.serif.regular, fontSize: 28, lineHeight: 34, fontWeight: '400' },
   description: { fontSize: 14, lineHeight: 20, marginBottom: Spacing.two },
   emptyCard: {
     borderRadius: BorderRadius.lg,
@@ -506,20 +506,19 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   simCard: {
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    marginBottom: Spacing.three,
-    overflow: 'hidden',
+    borderBottomWidth: 1,
+    alignSelf: 'stretch',
+    paddingVertical: Spacing.three,
   },
   simCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: Spacing.three,
+    paddingVertical: Spacing.two,
   },
   simMeta: { flex: 1, gap: 2 },
   simDate: { fontSize: 10, fontWeight: '700' },
-  simTitle: { fontSize: 16, lineHeight: 22, fontWeight: '700', marginBottom: Spacing.one },
+  simTitle: { fontSize: 16, lineHeight: 22, fontWeight: '600', marginBottom: Spacing.one },
   metaBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   metaBadge: {
     flexDirection: 'row',
@@ -531,8 +530,9 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 10, fontWeight: '600' },
   expandedContent: {
-    borderTopWidth: 1,
     padding: Spacing.three,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.two,
   },
   sectionLabel: { fontSize: 10, fontWeight: '700', marginBottom: Spacing.one },
   simDescription: { fontSize: 14, lineHeight: 20, marginBottom: Spacing.three },
@@ -555,10 +555,15 @@ const styles = StyleSheet.create({
   overlayPressable: { flex: 1 },
   bottomSheet: {
     position: 'absolute',
-    bottom: 0, left: 0, right: 0,
+    bottom: 0,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: MaxContentWidth,
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     borderTopWidth: 1,
+    borderLeftWidth: Platform.select({ web: 1, default: 0 }),
+    borderRightWidth: Platform.select({ web: 1, default: 0 }),
     paddingTop: Spacing.two,
     zIndex: 100,
     maxHeight: '90%',
@@ -583,7 +588,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.two,
   },
-  sheetName: { fontSize: 22, fontWeight: '700' },
+  sheetName: { fontFamily: Fonts.serif.regular, fontSize: 28, lineHeight: 34, fontWeight: '400' },
   sheetBadge: {
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,
