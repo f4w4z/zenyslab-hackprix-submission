@@ -99,8 +99,11 @@ export async function analyzeDecision(decisionText: string): Promise<SimulationR
       temperature: 0.7,
       topK: 40,
       topP: 0.95,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 8192,
       responseMimeType: 'application/json',
+      thinkingConfig: {
+        thinkingBudget: 0,
+      },
     },
   };
 
