@@ -62,8 +62,8 @@ export const Fonts = {
     bold: Platform.select({ web: 'var(--font-display)', default: 'Inter-Bold' }),
   },
   serif: {
-    regular: Platform.select({ web: 'var(--font-display)', default: 'Inter-Regular' }),
-    italic: Platform.select({ web: 'var(--font-display)', default: 'Inter-Regular' }),
+    regular: Platform.select({ web: 'var(--font-serif)', default: 'InstrumentSerif-Regular' }),
+    italic: Platform.select({ web: 'var(--font-serif)', default: 'InstrumentSerif-Italic' }),
   },
   mono: Platform.select({ web: 'var(--font-mono)', default: 'monospace' }),
 };
