@@ -48,6 +48,9 @@ export default function HomeScreen() {
   const [proposalText, setProposalText] = useState('');
   const [rawTranscriptText, setRawTranscriptText] = useState('');
   const [spokenLanguage, setSpokenLanguage] = useState<'unknown' | 'en-IN' | 'hi-IN' | 'te-IN'>('unknown');
+  // Ref mirrors spokenLanguage so runAnalysis always reads the current value
+  // even if called before React has flushed the setState.
+  const spokenLanguageRef = useRef<'unknown' | 'en-IN' | 'hi-IN' | 'te-IN'>('unknown');
   const [currentSimulation, setCurrentSimulation] = useState<SimulationRecord | null>(null);
   const [englishSimulation, setEnglishSimulation] = useState<SimulationRecord | null>(null);
   const [showEnglish, setShowEnglish] = useState(false);
@@ -197,6 +200,9 @@ export default function HomeScreen() {
             // Auto detect language from raw text if user selected Auto Detect
             if (spokenLanguage === 'unknown') {
               const detected = detectLanguageFromText(rawText);
+              // Update ref immediately so runAnalysis sees the correct language
+              // even before React flushes the setState below.
+              spokenLanguageRef.current = detected;
               setSpokenLanguage(detected);
             }
 
@@ -270,6 +276,9 @@ export default function HomeScreen() {
               // Auto detect language from raw text if user selected Auto Detect
               if (spokenLanguage === 'unknown') {
                 const detected = detectLanguageFromText(rawText);
+                // Update ref immediately so runAnalysis sees the correct language
+                // even before React flushes the setState below.
+                spokenLanguageRef.current = detected;
                 setSpokenLanguage(detected);
               }
 
@@ -327,9 +336,12 @@ export default function HomeScreen() {
     setIsLoading(true);
 
     try {
-      // Pass spoken language so server can translate the result
-      const targetLang = (spokenLanguage === 'hi-IN' || spokenLanguage === 'te-IN')
-        ? spokenLanguage
+      // Read from the ref — not the state — to get the language that was
+      // detected/selected during the recording phase. The state may not have
+      // been flushed yet when this function executes.
+      const effectiveLang = spokenLanguageRef.current;
+      const targetLang = (effectiveLang === 'hi-IN' || effectiveLang === 'te-IN')
+        ? effectiveLang
         : undefined;
 
       const simulation = await analyzeDecision(text, targetLang);
@@ -440,7 +452,12 @@ export default function HomeScreen() {
                   return (
                     <Pressable
                       key={lang.code}
-                      onPress={() => setSpokenLanguage(lang.code as any)}
+                      onPress={() => {
+                        // Update both state (for UI) and ref (for runAnalysis) synchronously
+                        const code = lang.code as 'unknown' | 'en-IN' | 'hi-IN' | 'te-IN';
+                        spokenLanguageRef.current = code;
+                        setSpokenLanguage(code);
+                      }}
                       style={[
                         styles.langPill,
                         isActive && { backgroundColor: theme.primaryContainer, borderColor: theme.primary },
