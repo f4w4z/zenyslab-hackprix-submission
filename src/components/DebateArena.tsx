@@ -29,6 +29,7 @@ import { BorderRadius, Spacing } from '@/constants/theme';
 import { ConflictPair, Stakeholder, VoiceArchetype } from '@/constants/mockData';
 import { generateVoice } from '@/services/elevenlabs';
 import { translateAndSpeak } from '@/services/sarvam';
+import { generateDebateTurn } from '@/services/gemini';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,66 +97,8 @@ function playBase64Audio(
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // ---------------------------------------------------------------------------
-// Direct Groq call — 1 sentence, punchy
+// Debate text via secure server proxy — 1 sentence, punchy
 // ---------------------------------------------------------------------------
-
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-
-async function fetchDebateText(params: {
-  groupA: string;
-  groupB: string;
-  decisionContext: string;
-  conflictReason: string;
-  speakerSide: 'groupA' | 'groupB';
-  history: Array<{ speaker: string; text: string }>;
-}): Promise<string> {
-  const { groupA, groupB, decisionContext, conflictReason, speakerSide, history } = params;
-  const apiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY ?? '';
-
-  if (!apiKey) throw new Error('Missing EXPO_PUBLIC_GROQ_API_KEY in .env');
-
-  const speakerName = speakerSide === 'groupA' ? groupA : groupB;
-  const opponentName = speakerSide === 'groupA' ? groupB : groupA;
-
-  const historyText = history
-    .slice(-4) // last 4 turns for tight context
-    .map((t) => `${t.speaker}: "${t.text}"`)
-    .join('\n');
-
-  const system = `You are ${speakerName} in a heated debate.
-Conflict: ${conflictReason}
-Rules: ONE sentence only. First-person. Passionate and direct. Rebut ${opponentName}'s last point. No filler.`;
-
-  const user = `Decision: "${decisionContext}"
-${historyText ? `Recent exchange:\n${historyText}\n` : ''}${speakerName} fires back (ONE sentence, sharp):`;
-
-  const resp = await fetch(GROQ_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      temperature: 0.9,
-      max_tokens: 80, // forces brevity
-    }),
-  });
-
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Groq error (${resp.status}): ${err}`);
-  }
-
-  const data = await resp.json();
-  const text = data?.choices?.[0]?.message?.content?.trim() ?? '';
-  // Strip any quotes the model wraps the sentence in
-  return text.replace(/^["'"'"]|["'"'"]$/g, '').trim();
-}
 
 // ---------------------------------------------------------------------------
 // Audio fetch helper — handles English (ElevenLabs) + Hindi/Telugu (Sarvam)
@@ -194,28 +137,30 @@ async function prefetchTurn(params: {
   const speakerName = speakerSide === 'groupA' ? conflict.groupA : conflict.groupB;
   const archetype = resolveArchetype(speakerName, stakeholders);
 
-  // Step 1: generate text
-  const text = await fetchDebateText({
+  // Step 1: generate text via secure server proxy
+  const text = await generateDebateTurn({
     groupA: conflict.groupA,
     groupB: conflict.groupB,
     decisionContext,
     conflictReason: conflict.reason,
-    speakerSide,
+    currentSpeaker: speakerSide,
     history,
   });
+  // Strip any quotes the model wraps the sentence in
+  const cleanText = text.replace(/^["'"'"]|["'"'"]$/g, '').trim();
 
   // Step 2: generate audio (non-fatal)
   let audioBase64: string | null = null;
   let mimeType: 'audio/mpeg' | 'audio/wav' = 'audio/mpeg';
   try {
-    const result = await fetchDebateAudio(text, archetype, language);
+    const result = await fetchDebateAudio(cleanText, archetype, language);
     audioBase64 = result.base64;
     mimeType = result.mimeType;
   } catch (e) {
     console.warn('[DebateArena] Audio fetch failed for turn, continuing silently:', e);
   }
 
-  return { speakerSide, speakerName, text, audioBase64, mimeType };
+  return { speakerSide, speakerName, text: cleanText, audioBase64, mimeType };
 }
 
 // ---------------------------------------------------------------------------
