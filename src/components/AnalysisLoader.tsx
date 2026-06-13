@@ -73,7 +73,12 @@ export function AnalysisLoader({ isAnalyzing }: AnalysisLoaderProps) {
       </View>
       
       <View style={styles.textContainer}>
-        <Animated.View key={stepIndex} entering={FadeIn.duration(400)} exiting={FadeOut.duration(400)}>
+        <Animated.View 
+          key={stepIndex} 
+          entering={FadeIn.duration(400)} 
+          exiting={FadeOut.duration(400)}
+          style={styles.animWrapper}
+        >
           <ThemedText type="small" themeColor="textSecondary" style={styles.statusText}>
             {LOADING_STEPS[stepIndex]}
           </ThemedText>
@@ -105,6 +110,16 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+  animWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -134,9 +134,8 @@ export function VoicePlayer({
         }
       });
 
-      audio.addEventListener('error', () => {
-        setPlayerState('error');
-        setErrorMessage('Failed to play audio. Please try again.');
+      audio.addEventListener('error', (e) => {
+        console.warn('Audio metadata load warning:', e);
       });
 
       await audio.play();
