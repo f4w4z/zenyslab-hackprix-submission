@@ -20,6 +20,7 @@ import { VoicePlayer } from '@/components/VoicePlayer';
 import { ConflictMap } from '@/components/ConflictMap';
 import { DebateArena } from '@/components/DebateArena';
 import { AccountabilityLedger } from '@/components/AccountabilityLedger';
+import { EquityIndex } from '@/components/EquityIndex';
 import { MOCK_SIMULATIONS, SimulationRecord, Stakeholder, ConflictPair } from '@/constants/mockData';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, BottomTabInset, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -604,6 +605,12 @@ export default function HomeScreen() {
           {/* ── RESULTS ── */}
           {currentSimulation && !isLoading && (
             <View style={styles.resultsContainer}>
+              <EquityIndex
+                stakeholders={displayedSimulation?.stakeholders || []}
+                conflicts={displayedSimulation?.conflicts || []}
+                blindSpots={displayedSimulation?.blindSpots || []}
+              />
+              
               {/* Language toggle — only shown when a translation is available */}
               {englishSimulation && (
                 <Pressable
@@ -639,7 +646,7 @@ export default function HomeScreen() {
 
                 </View>
                 <ThemedText type="smallBold" style={styles.bannerTitle}>
-                  {displayedSimulation?.decisionTitle}
+                  {rawTranscriptText || proposalText}
                 </ThemedText>
               </View>
 

@@ -25,6 +25,8 @@ Be thorough, empathetic, and balanced. Prioritise overlooked groups such as:
 disabled individuals, commuters, part-time workers, caregivers, scholarship holders,
 contractual staff, international students, rural communities, and elderly individuals.
 
+If the decision text is in Hindi, Telugu, or any other language, analyze it directly without commenting on the language. Never say 'I don't see a transcription' or describe the input — just analyze it.
+
 For voiceArchetype, assign one of: student | worker | authority | parent | default`;
 
 const GEMINI_PROMPT_TEMPLATE = (decision) => `
@@ -276,7 +278,8 @@ router.post('/gemini/refine', async (req, res) => {
             '2. If the input transcript is in Hindi, Telugu, or any other language, translate it into clean, natural English.\n' +
             '3. Deduce what decision proposal the user was trying to say based on context.\n' +
             '4. Keep the user\'s original intent intact.\n' +
-            '5. Output ONLY the refined, clean English transcript. Do not add any conversational text, explanations, or metadata.',
+            '5. Output ONLY the refined, clean English transcript. Do not add any conversational text, explanations, or metadata.\n' +
+            'If the decision text is in Hindi, Telugu, or any other language, analyze it directly without commenting on the language. Never say \'I don\'t see a transcription\' or describe the input — just analyze it.',
         },
         {
           role: 'user',

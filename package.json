@@ -6,6 +6,7 @@
     "@expo-google-fonts/instrument-serif": "^0.4.1",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo/ui": "~56.0.17",
+    "@solana/web3.js": "^1.98.4",
     "expo": "~56.0.11",
     "expo-audio": "~56.0.12",
     "expo-av": "^16.0.8",
