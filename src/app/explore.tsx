@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Animated,
+  BackHandler,
   Platform,
   Pressable,
   RefreshControl,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
+import { router } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -78,6 +80,23 @@ export default function HistoryScreen() {
     });
   };
 
+  // Hardware back button handling for Android
+  useEffect(() => {
+    const onBackPress = () => {
+      if (selectedStakeholder) {
+        closeStakeholderDetail();
+        return true;
+      }
+      // If no overlays open, navigate back to Home (Analyze tab)
+      router.replace('/');
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStakeholder]);
+
   const toggleExpand = (id: string) => {
     setExpandedSimId((prev) => (prev === id ? null : id));
   };
@@ -116,6 +135,38 @@ export default function HistoryScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        {/* Top Navigation Bar */}
+        <View style={[styles.screenHeader, { borderBottomColor: theme.outline }]}>
+          <Pressable
+            onPress={() => router.replace('/')}
+            style={({ pressed }) => [
+              styles.headerButton,
+              { backgroundColor: theme.backgroundElement },
+              pressed && { opacity: 0.7 },
+            ]}>
+            <SymbolView
+              name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
+              tintColor={theme.text}
+              size={18}
+            />
+            <ThemedText type="smallBold" style={{ marginLeft: Spacing.one }}>Back</ThemedText>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.replace('/')}
+            style={({ pressed }) => [
+              styles.headerButton,
+              { backgroundColor: theme.backgroundElement },
+              pressed && { opacity: 0.7 },
+            ]}>
+            <SymbolView
+              name={{ ios: 'house.fill', android: 'home', web: 'home' }}
+              tintColor={theme.text}
+              size={18}
+            />
+          </Pressable>
+        </View>
+
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -601,4 +652,19 @@ const styles = StyleSheet.create({
   },
   voiceSection: { marginBottom: Spacing.three },
   sarvamNote: { fontSize: 10, lineHeight: 14, textAlign: 'center' },
+  screenHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+    borderBottomWidth: 1,
+  },
+  headerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: BorderRadius.md,
+  },
 });

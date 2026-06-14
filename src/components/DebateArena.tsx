@@ -16,12 +16,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
 import { SymbolView } from 'expo-symbols';
+import { createAudioPlayer } from 'expo-audio';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
@@ -78,19 +80,30 @@ function resolveArchetype(groupName: string, stakeholders: Stakeholder[]): Voice
 function playBase64Audio(
   base64: string,
   mimeType: string,
-  activeAudioRef: React.MutableRefObject<HTMLAudioElement | null>
+  activePlayerRef: React.MutableRefObject<any>
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const AudioCtor = (typeof window !== 'undefined' ? window.Audio : null) as
-      | (new (src?: string) => HTMLAudioElement)
-      | null;
-    if (!AudioCtor) { resolve(); return; }
+  return new Promise((resolve) => {
+    try {
+      const dataUri = `data:${mimeType};base64,${base64}`;
+      const player = createAudioPlayer(dataUri);
+      activePlayerRef.current = player;
 
-    const audio = new AudioCtor(`data:${mimeType};base64,${base64}`);
-    activeAudioRef.current = audio;
-    audio.addEventListener('ended', () => { activeAudioRef.current = null; resolve(); });
-    audio.addEventListener('error', () => { activeAudioRef.current = null; resolve(); }); // non-fatal
-    audio.play().catch(() => { activeAudioRef.current = null; resolve(); });
+      const subscription = player.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish) {
+          subscription.remove();
+          player.release();
+          if (activePlayerRef.current === player) {
+            activePlayerRef.current = null;
+          }
+          resolve();
+        }
+      });
+
+      player.play();
+    } catch (e) {
+      console.warn('[DebateArena] playBase64Audio failed:', e);
+      resolve();
+    }
   });
 }
 
@@ -273,7 +286,7 @@ export function DebateArena({
   // Refs
   const isRunningRef = useRef(false);
   const historyRef = useRef<{ speaker: string; text: string }[]>([]);
-  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const activePlayerRef = useRef<any>(null);
   const scrollRef = useRef<ScrollView>(null);
   const runPipelineRef = useRef<((promise: Promise<PrefetchedTurn>) => Promise<void>) | null>(null);
 
@@ -295,7 +308,10 @@ export function DebateArena({
   useEffect(() => {
     return () => {
       isRunningRef.current = false;
-      activeAudioRef.current?.pause();
+      if (activePlayerRef.current) {
+        activePlayerRef.current.pause();
+        activePlayerRef.current.release();
+      }
     };
   }, []);
 
@@ -352,7 +368,7 @@ export function DebateArena({
 
       // ── Play current audio ─────────────────────────────────────────────────
       if (turn.audioBase64 && isRunningRef.current) {
-        await playBase64Audio(turn.audioBase64, turn.mimeType, activeAudioRef);
+        await playBase64Audio(turn.audioBase64, turn.mimeType, activePlayerRef);
       }
 
       if (!isRunningRef.current) return;
@@ -401,8 +417,11 @@ export function DebateArena({
     isRunningRef.current = false;
     setIsRunning(false);
     setIsLoading(false);
-    activeAudioRef.current?.pause();
-    activeAudioRef.current = null;
+    if (activePlayerRef.current) {
+      activePlayerRef.current.pause();
+      activePlayerRef.current.release();
+      activePlayerRef.current = null;
+    }
     setTranscript((prev) => prev.map((e) => ({ ...e, isActive: false })));
   }, []);
 
@@ -672,7 +691,22 @@ const styles = StyleSheet.create({
     maxWidth: '80%',
     flexShrink: 1,
   },
-  bubbleActive: { elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 4 },
+  bubbleActive: {
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.12)',
+      },
+    }),
+  },
   bubbleName: { fontSize: 9, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
   bubbleText: { fontSize: 13, lineHeight: 18, flexShrink: 1 },
   typingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },

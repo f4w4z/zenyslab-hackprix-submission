@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Pressable, ActivityIndicator, Linking as RNLinking } from 'react-native';
+import { View, StyleSheet, Pressable, ActivityIndicator, Linking as RNLinking, Platform } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, FadeIn } from 'react-native-reanimated';
 
@@ -214,11 +214,20 @@ const styles = StyleSheet.create({
   },
   barFill: {
     height: '100%',
-    shadowColor: '#4F6EF7',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#4F6EF7',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0px 0px 4px rgba(79, 110, 247, 0.8)',
+      },
+    }),
   },
   gradient: {
     flex: 1,

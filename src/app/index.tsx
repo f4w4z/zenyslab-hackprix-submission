@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
+  BackHandler,
   Platform,
   Pressable,
   ScrollView,
@@ -11,7 +11,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
-import { Audio } from 'expo-av';
+import {
+  AudioModule,
+  useAudioRecorder,
+  useAudioRecorderState,
+  RecordingPresets,
+  useAudioPlayer,
+  setAudioModeAsync,
+} from 'expo-audio';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -99,6 +106,8 @@ const UI_TRANSLATIONS = {
 export default function HomeScreen() {
   const theme = useTheme();
 
+
+
   // Core state
   const [proposalText, setProposalText] = useState('');
   const [rawTranscriptText, setRawTranscriptText] = useState('');
@@ -120,16 +129,26 @@ export default function HomeScreen() {
   const [selectedDebateConflict, setSelectedDebateConflict] = useState<ConflictPair | null>(null);
   const [showShadowPolicy, setShowShadowPolicy] = useState(false);
 
-  // Summary inline audio refs (web: HTMLAudioElement)
-  const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Audio recording & summary playback hooks
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder, 500);
 
-  const destroySummaryAudio = () => {
-    if (summaryAudioRef.current) {
-      summaryAudioRef.current.pause();
-      summaryAudioRef.current.src = '';
-      summaryAudioRef.current = null;
-    }
-  };
+  const summaryPlayer = useAudioPlayer();
+
+  // Sync state when summary audio playback finishes
+  useEffect(() => {
+    const sub = summaryPlayer.addListener('playbackStatusUpdate', (status) => {
+      if (status.didJustFinish) {
+        setSummaryAudioState('idle');
+      }
+    });
+    return () => sub.remove();
+  }, [summaryPlayer]);
+
+  const destroySummaryAudio = useCallback(() => {
+    summaryPlayer.pause();
+    summaryPlayer.seekTo(0);
+  }, [summaryPlayer]);
 
   const handleSummaryPlayPause = async () => {
     if (summaryAudioState === 'loading') return;
@@ -139,15 +158,15 @@ export default function HomeScreen() {
     if (!text) return;
 
     // Pause if playing
-    if (summaryAudioState === 'playing' && summaryAudioRef.current) {
-      summaryAudioRef.current.pause();
+    if (summaryAudioState === 'playing') {
+      summaryPlayer.pause();
       setSummaryAudioState('paused');
       return;
     }
 
     // Resume if paused
-    if (summaryAudioState === 'paused' && summaryAudioRef.current) {
-      await summaryAudioRef.current.play();
+    if (summaryAudioState === 'paused') {
+      summaryPlayer.play();
       setSummaryAudioState('playing');
       return;
     }
@@ -170,20 +189,8 @@ export default function HomeScreen() {
       }
 
       const dataUri = `data:${mimeType};base64,${base64}`;
-      // Cast to HTMLAudioElement constructor explicitly — `typeof Audio` would resolve
-      // to expo-av's Audio (which has no construct signature), causing a TS error.
-      const AudioCtor = (typeof window !== 'undefined' ? window.Audio : null) as
-        | (new (src?: string) => HTMLAudioElement)
-        | null;
-      if (!AudioCtor) throw new Error('Audio not available on this platform');
-      const audio = new AudioCtor(dataUri);
-      summaryAudioRef.current = audio;
-
-      audio.addEventListener('ended', () => {
-        setSummaryAudioState('idle');
-      });
-
-      await audio.play();
+      summaryPlayer.replace(dataUri);
+      summaryPlayer.play();
       setSummaryAudioState('playing');
     } catch (err: any) {
       console.error('Summary audio error:', err);
@@ -194,7 +201,7 @@ export default function HomeScreen() {
   // Cleanup summary audio on unmount
   useEffect(() => {
     return () => { destroySummaryAudio(); };
-  }, []);
+  }, [destroySummaryAudio]);
 
   // Autoplay summary audio when a new simulation result arrives
   useEffect(() => {
@@ -210,7 +217,7 @@ export default function HomeScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [recordingObj, setRecordingObj] = useState<Audio.Recording | null>(null);
+  // Recording managed by useAudioRecorder hook
 
   const durationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mediaRecorderRef = useRef<any>(null);
@@ -228,7 +235,7 @@ export default function HomeScreen() {
   // Audio permission request helper
   const requestRecordingPermissions = async () => {
     if (Platform.OS === 'web') return true;
-    const response = await Audio.requestPermissionsAsync();
+    const response = await AudioModule.requestRecordingPermissionsAsync();
     return response.granted;
   };
 
@@ -291,21 +298,14 @@ export default function HomeScreen() {
           return;
         }
 
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
+        await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
         });
 
-        const { recording } = await Audio.Recording.createAsync(
-          Audio.RecordingOptionsPresets.HIGH_QUALITY
-        );
-
-        setRecordingObj(recording);
+        await recorder.prepareToRecordAsync();
+        recorder.record();
         setIsRecording(true);
-        setRecordingDuration(0);
-        durationTimerRef.current = setInterval(() => {
-          setRecordingDuration((prev) => prev + 1);
-        }, 1000);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to start recording');
@@ -325,10 +325,10 @@ export default function HomeScreen() {
           mediaRecorderRef.current.stop();
         }
       } else {
-        if (recordingObj) {
-          await recordingObj.stopAndUnloadAsync();
-          const uri = recordingObj.getURI();
-          setRecordingObj(null);
+        if (recorder) {
+          await recorder.stop();
+          setIsRecording(false);
+          const uri = recorder.uri;
 
           if (uri) {
             setIsTranscribing(true);
@@ -494,6 +494,31 @@ export default function HomeScreen() {
     setSelectedDebateConflict(null);
   };
 
+  // Hardware back button handling for Android
+  useEffect(() => {
+    const onBackPress = () => {
+      if (selectedStakeholder) {
+        closeStakeholderDetail();
+        return true;
+      }
+      if (selectedDebateConflict) {
+        handleCloseDebate();
+        return true;
+      }
+      if (showShadowPolicy) {
+        setShowShadowPolicy(false);
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => {
+      subscription.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStakeholder, selectedDebateConflict, showShadowPolicy]);
+
   const handleRetry = () => {
     if (proposalText.trim().length > 0) {
       runAnalysis(proposalText.trim());
@@ -598,7 +623,7 @@ export default function HomeScreen() {
                       size={48}
                     />
                     <ThemedText type="code" style={[styles.micCircleLabel, { color: theme.error }]}>
-                      {recordingDuration}s
+                      {Platform.OS === 'web' ? recordingDuration : Math.round((recorderState.durationMillis || 0) / 1000)}s
                     </ThemedText>
                   </Pressable>
                 ) : (

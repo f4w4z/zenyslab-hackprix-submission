@@ -9,7 +9,6 @@
     "@solana/web3.js": "^1.98.4",
     "expo": "~56.0.11",
     "expo-audio": "~56.0.12",
-    "expo-av": "^16.0.8",
     "expo-constants": "~56.0.18",
     "expo-device": "~56.0.4",
     "expo-file-system": "~56.0.8",

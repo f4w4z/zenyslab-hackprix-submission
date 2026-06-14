@@ -11,9 +11,9 @@
  *   4. expo-av Audio object plays the cached file
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { SymbolView } from 'expo-symbols';
 
@@ -73,31 +73,33 @@ export function VoicePlayer({
   const [selectedLang, setSelectedLang] = useState<PlayerLanguage>(defaultLanguage);
   const [playerState, setPlayerState] = useState<PlayerState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [position, setPosition] = useState(0);   // milliseconds
-  const [duration, setDuration] = useState(0);   // milliseconds
 
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const player = useAudioPlayer();
+  const status = useAudioPlayerStatus(player);
 
-  // Cleanup audio on unmount
+  const position = (status.currentTime ?? 0) * 1000;
+  const duration = (status.duration ?? 0) * 1000;
+
+  // Sync state when playback finishes or status changes
   useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(() => {});
+    const sub = player.addListener('playbackStatusUpdate', (statusUpdate) => {
+      if (statusUpdate.didJustFinish) {
+        setPlayerState('idle');
+      } else if (statusUpdate.playing) {
+        setPlayerState('playing');
+      } else {
+        setPlayerState((prev) => (prev === 'playing' ? 'paused' : prev));
       }
-    };
-  }, []);
+    });
+    return () => sub.remove();
+  }, [player]);
 
-  // Unload when language changes
   const resetPlayer = useCallback(async () => {
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync().catch(() => {});
-      soundRef.current = null;
-    }
+    player.pause();
+    player.seekTo(0);
     setPlayerState('idle');
-    setPosition(0);
-    setDuration(0);
     setErrorMessage(null);
-  }, []);
+  }, [player]);
 
   const handleLanguageSelect = async (lang: PlayerLanguage) => {
     if (lang === selectedLang) return;
@@ -122,11 +124,9 @@ export function VoicePlayer({
 
     try {
       // Configure audio session (important for iOS)
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
+      await setAudioModeAsync({
+        allowsRecording: false,
+        playsInSilentMode: true,
       });
 
       // Fetch base64 audio from API
@@ -143,22 +143,9 @@ export function VoicePlayer({
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      // Load into expo-av
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: cacheUri },
-        { shouldPlay: true },
-        (status) => {
-          if (!status.isLoaded) return;
-          setPosition(status.positionMillis ?? 0);
-          setDuration(status.durationMillis ?? 0);
-          if (status.didJustFinish) {
-            setPlayerState('idle');
-            setPosition(0);
-          }
-        }
-      );
-
-      soundRef.current = sound;
+      // Load and Play
+      player.replace(cacheUri);
+      player.play();
       setPlayerState('playing');
     } catch (error: any) {
       console.error('VoicePlayer error:', error);
@@ -197,13 +184,11 @@ export function VoicePlayer({
       return;
     }
 
-    if (!soundRef.current) return;
-
     if (playerState === 'playing') {
-      await soundRef.current.pauseAsync();
+      player.pause();
       setPlayerState('paused');
     } else if (playerState === 'paused') {
-      await soundRef.current.playAsync();
+      player.play();
       setPlayerState('playing');
     }
   };

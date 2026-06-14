@@ -1,7 +1,8 @@
 import React from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { BackHandler, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
+import { router } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -50,9 +51,51 @@ function TechCard({ name, description, iconName, url }: TechCardProps) {
 export default function AboutScreen() {
   const theme = useTheme();
 
+  // Hardware back button handling for Android
+  React.useEffect(() => {
+    const onBackPress = () => {
+      router.replace('/');
+      return true;
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, []);
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        {/* Top Navigation Bar */}
+        <View style={[styles.screenHeader, { borderBottomColor: theme.outline }]}>
+          <Pressable
+            onPress={() => router.replace('/')}
+            style={({ pressed }) => [
+              styles.headerButton,
+              { backgroundColor: theme.backgroundElement },
+              pressed && { opacity: 0.7 },
+            ]}>
+            <SymbolView
+              name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
+              tintColor={theme.text}
+              size={18}
+            />
+            <ThemedText type="smallBold" style={{ marginLeft: Spacing.one }}>Back</ThemedText>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.replace('/')}
+            style={({ pressed }) => [
+              styles.headerButton,
+              { backgroundColor: theme.backgroundElement },
+              pressed && { opacity: 0.7 },
+            ]}>
+            <SymbolView
+              name={{ ios: 'house.fill', android: 'home', web: 'home' }}
+              tintColor={theme.text}
+              size={18}
+            />
+          </Pressable>
+        </View>
+
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -301,5 +344,20 @@ const styles = StyleSheet.create({
   philosophyText: {
     fontSize: 15,
     lineHeight: 22,
+  },
+  screenHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+    borderBottomWidth: 1,
+  },
+  headerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: BorderRadius.md,
   },
 });
