@@ -76,9 +76,10 @@ export function ReportCard({ simulation, language }: ReportCardProps) {
         
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText style={styles.brandTitle}>
-            <ThemedText style={styles.brandDot}>🔵</ThemedText> ECHO
-          </ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={styles.brandDotCircle} />
+            <ThemedText style={styles.brandTitle}>ECHO</ThemedText>
+          </View>
           <ThemedText style={styles.brandSubtitle}>{t.brandSubtitle}</ThemedText>
         </View>
 
@@ -112,7 +113,7 @@ export function ReportCard({ simulation, language }: ReportCardProps) {
           {simulation.blindSpots && simulation.blindSpots.length > 0 ? (
             <View style={styles.list}>
               {simulation.blindSpots.map((bs, idx) => (
-                <ThemedText key={idx} style={styles.listItem}>🔴 {bs}</ThemedText>
+                <ThemedText key={idx} style={styles.listItem}>• {bs}</ThemedText>
               ))}
             </View>
           ) : (
@@ -171,9 +172,13 @@ const styles = StyleSheet.create({
     color: '#E8E8F0',
     letterSpacing: 1,
   },
-  brandDot: {
-    fontSize: 24,
-    color: '#6E56FF', // Purple/blue accent approximation for emoji replacement if needed
+  brandDotCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#6E56FF',
+    marginRight: 8,
+    alignSelf: 'center',
   },
   brandSubtitle: {
     fontSize: 16,

@@ -95,7 +95,7 @@ export function ShadowPolicyModal({
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <ThemedText style={[styles.headerTitle, { color: theme.primary }]}>
-              ✨ ECHO-IMPROVED POLICY
+              ECHO-IMPROVED POLICY
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 4 }}>
               AI-generated policy revision addressing all blind spots
@@ -108,7 +108,7 @@ export function ShadowPolicyModal({
               { backgroundColor: theme.backgroundElement },
               pressed && { opacity: 0.7 },
             ]}>
-            <ThemedText style={{ fontSize: 18, color: theme.textSecondary }}>✕</ThemedText>
+            <ThemedText style={{ fontSize: 16, fontWeight: '700', color: theme.textSecondary }}>X</ThemedText>
           </Pressable>
         </View>
 
@@ -189,7 +189,7 @@ export function ShadowPolicyModal({
                       <View
                         key={idx}
                         style={[styles.changeRow, { borderColor: theme.outline }]}>
-                        <ThemedText style={{ fontSize: 16 }}>✅</ThemedText>
+                        <ThemedText style={{ fontSize: 16, fontWeight: '700', color: theme.success }}>+</ThemedText>
                         <View style={{ flex: 1 }}>
                           <ThemedText type="smallBold" style={{ color: theme.text }}>
                             {change.group}
@@ -214,7 +214,7 @@ export function ShadowPolicyModal({
                     pressed && { opacity: 0.85 },
                   ]}>
                   <ThemedText style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
-                    {copied ? '✓ Copied!' : '📋 Copy Improved Policy'}
+                    {copied ? 'Copied!' : 'Copy Improved Policy'}
                   </ThemedText>
                 </Pressable>
               </View>

@@ -192,7 +192,7 @@ export function StakeholderCard({
 
 const styles = StyleSheet.create({
   card: {
-    paddingVertical: Spacing.four,
+    paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.three,
     borderBottomWidth: 1,
     alignSelf: 'stretch',

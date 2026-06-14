@@ -718,7 +718,7 @@ export default function HomeScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: Spacing.three, gap: Spacing.two, alignItems: 'center' }}>
                 {isTranslating && <ActivityIndicator size="small" color={theme.primary} style={{ marginRight: Spacing.two }} />}
                 {[
-                  { code: 'en-IN', label: '🌐 English' },
+                  { code: 'en-IN', label: 'English' },
                   { code: 'hi-IN', label: 'हिंदी' },
                   { code: 'te-IN', label: 'తెలుగు' },
                 ].map((lang) => {
@@ -832,7 +832,11 @@ export default function HomeScreen() {
                     { borderColor: theme.primary, backgroundColor: theme.primaryContainer },
                     pressed && { opacity: 0.8 },
                   ]}>
-                  <ThemedText style={{ fontSize: 18 }}>✨</ThemedText>
+                  <SymbolView
+                    name={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' }}
+                    tintColor={theme.primary}
+                    size={18}
+                  />
                   <ThemedText type="smallBold" style={{ color: theme.primary }}>
                     {ui.generateImprovedPolicy}
                   </ThemedText>
@@ -849,7 +853,7 @@ export default function HomeScreen() {
               )}
 
               {/* Accountability Ledger */}
-              <View style={{ marginTop: Spacing.four, borderTopWidth: 1, borderTopColor: theme.outline, paddingTop: Spacing.four, marginBottom: Spacing.two }}>
+              <View style={{ marginTop: Spacing.four, borderTopWidth: 1, borderTopColor: theme.outline, paddingTop: Spacing.three, marginBottom: 0 }}>
                 <ThemedText type="code" themeColor="textSecondary" style={{ fontWeight: '700', letterSpacing: 0.5 }}>
                   {ui.accountability}
                 </ThemedText>
@@ -860,15 +864,19 @@ export default function HomeScreen() {
               />
 
               {/* Action Buttons */}
-              <View style={{ flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.four }}>
+              <View style={{ flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.three, marginBottom: Spacing.five }}>
                 <Pressable
                   onPress={() => exportReportCard('report-card-export', 'analysis')}
                   style={({ pressed }) => [
-                    styles.resetButtonBottom,
+                    styles.actionButton,
                     { flex: 1, borderColor: theme.outline, backgroundColor: theme.primaryContainer },
                     pressed && { opacity: 0.8 },
                   ]}>
-                  <ThemedText style={{ fontSize: 16 }}>📊</ThemedText>
+                  <SymbolView
+                    name={{ ios: 'doc.plaintext.fill', android: 'description', web: 'description' }}
+                    tintColor={theme.primary}
+                    size={16}
+                  />
                   <ThemedText type="code" style={{ fontWeight: '700', color: theme.primary }}>{ui.exportReportCard}</ThemedText>
                 </Pressable>
 
@@ -876,7 +884,7 @@ export default function HomeScreen() {
                 <Pressable
                   onPress={handleReset}
                   style={({ pressed }) => [
-                    styles.resetButtonBottom,
+                    styles.actionButton,
                     { flex: 1, borderColor: theme.outline },
                     pressed && { backgroundColor: theme.backgroundElement },
                   ]}>
@@ -981,7 +989,7 @@ export default function HomeScreen() {
                   size={24}
                   style={styles.quoteIcon}
                 />
-                <ThemedText type="small" style={[styles.quoteText, { fontStyle: 'italic' }]}>
+                <ThemedText type="small" style={styles.quoteText}>
                   &ldquo;{selectedStakeholder.voiceQuote}&rdquo;
                 </ThemedText>
               </View>
@@ -1255,7 +1263,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  bannerTitle: { fontSize: 16, lineHeight: 22, fontWeight: '600' },
+  bannerTitle: { fontFamily: Fonts.serif.regular, fontSize: 18, lineHeight: 24, fontWeight: '400' },
   summaryText: { fontSize: 13, lineHeight: 18, marginTop: Spacing.one },
   summaryBar: {
     borderWidth: 1,
@@ -1286,8 +1294,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: Spacing.three,
-    marginBottom: Spacing.two,
+    marginTop: Spacing.four,
+    marginBottom: Spacing.one,
     paddingHorizontal: Spacing.one,
   },
   directoryTitle: { fontFamily: Fonts.serif.regular, fontSize: 22, lineHeight: 26, fontWeight: '400' },
@@ -1362,7 +1370,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   quoteIcon: { marginTop: -2 },
-  quoteText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  quoteText: {
+    fontFamily: Fonts.serif.italic,
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+  },
   voiceSection: { marginBottom: Spacing.three },
   sarvamNote: { fontSize: 10, lineHeight: 14, textAlign: 'center' },
   micArea: {
@@ -1414,22 +1427,19 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.one,
   },
   transcriptionText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontStyle: 'italic',
+    fontFamily: Fonts.serif.italic,
+    fontSize: 15,
+    lineHeight: 22,
   },
-  resetButtonBottom: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderRadius: BorderRadius.pill,
-    paddingVertical: Spacing.two,
+    paddingVertical: 12,
     paddingHorizontal: Spacing.four,
     gap: Spacing.two,
-    marginTop: Spacing.four,
-    marginBottom: Spacing.six,
-    alignSelf: 'center',
   },
   debateArenaContainer: {
     position: 'absolute',

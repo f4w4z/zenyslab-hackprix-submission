@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
-import { BorderRadius, Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing, Fonts } from '@/constants/theme';
 import { Stakeholder, ConflictPair } from '@/constants/mockData';
 
 export interface EquityIndexProps {
@@ -168,9 +168,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.four,
   },
   title: {
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 2,
+    fontFamily: Fonts.serif.regular,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1.5,
     color: '#8B8B9E',
     marginBottom: Spacing.three,
   },
@@ -179,8 +180,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.four,
   },
   scoreNumber: {
+    fontFamily: Fonts.serif.regular,
     fontSize: 56,
-    fontWeight: '900',
+    fontWeight: '400',
     lineHeight: 60,
   },
   scoreSubtext: {
@@ -216,9 +218,8 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   label: {
-    fontSize: 14,
-    fontWeight: '700',
-    fontStyle: 'italic',
+    fontFamily: Fonts.serif.italic,
+    fontSize: 15,
     textAlign: 'center',
   },
 });

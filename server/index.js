@@ -39,7 +39,7 @@ const DB_NAME = process.env.MONGODB_DATABASE ?? 'echo';
 
 if (!MONGODB_URI) {
   console.error(
-    '\n[Echo API] ❌  MONGODB_URI is not set.\n' +
+    '\n[Echo API] [ERROR] MONGODB_URI is not set.\n' +
     '  Make sure your root .env contains MONGODB_URI=mongodb+srv://...\n'
   );
   process.exit(1);
@@ -102,10 +102,10 @@ async function main() {
   // Make the db instance available to all route handlers via req.app.locals
   app.locals.db = db;
 
-  console.log(`[Echo API] ✅  Connected to MongoDB database "${DB_NAME}"`);
+  console.log(`[Echo API] [SUCCESS] Connected to MongoDB database "${DB_NAME}"`);
 
   app.listen(PORT, () => {
-    console.log(`[Echo API] 🚀  Server running at http://localhost:${PORT}`);
+    console.log(`[Echo API] Server running at http://localhost:${PORT}`);
     console.log(`[Echo API]     GET    http://localhost:${PORT}/api/simulations`);
     console.log(`[Echo API]     POST   http://localhost:${PORT}/api/simulations`);
     console.log(`[Echo API]     DELETE http://localhost:${PORT}/api/simulations/:id`);
@@ -123,6 +123,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[Echo API] ❌  Failed to start:', err.message);
+  console.error('[Echo API] [ERROR] Failed to start:', err.message);
   process.exit(1);
 });

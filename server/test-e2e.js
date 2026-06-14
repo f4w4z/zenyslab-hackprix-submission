@@ -16,7 +16,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 const results = [];
 
 function log(label, status, detail) {
-  const icon = status === 'PASS' ? '✅' : status === 'FAIL' ? '❌' : '⚠️';
+  const icon = status === 'PASS' ? '[PASS]' : status === 'FAIL' ? '[FAIL]' : '[WARN]';
   console.log(`  ${icon}  ${label}: ${detail}`);
   results.push({ label, status, detail });
 }

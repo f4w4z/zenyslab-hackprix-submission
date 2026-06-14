@@ -388,7 +388,7 @@ export default function HistoryScreen() {
                   size={24}
                   style={styles.quoteIcon}
                 />
-                <ThemedText type="small" style={[styles.quoteText, { fontStyle: 'italic' }]}>
+                <ThemedText type="small" style={styles.quoteText}>
                   &ldquo;{selectedStakeholder.voiceQuote}&rdquo;
                 </ThemedText>
               </View>
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   },
   simMeta: { flex: 1, gap: 2 },
   simDate: { fontSize: 10, fontWeight: '700' },
-  simTitle: { fontSize: 16, lineHeight: 22, fontWeight: '600', marginBottom: Spacing.one },
+  simTitle: { fontFamily: Fonts.serif.regular, fontSize: 18, lineHeight: 24, fontWeight: '400', marginBottom: Spacing.one },
   metaBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   metaBadge: {
     flexDirection: 'row',
@@ -593,7 +593,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   quoteIcon: { marginTop: -2 },
-  quoteText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  quoteText: {
+    fontFamily: Fonts.serif.italic,
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+  },
   voiceSection: { marginBottom: Spacing.three },
   sarvamNote: { fontSize: 10, lineHeight: 14, textAlign: 'center' },
 });

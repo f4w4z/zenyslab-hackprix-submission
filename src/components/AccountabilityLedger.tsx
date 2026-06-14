@@ -161,11 +161,11 @@ export function AccountabilityLedger({ decision, blindSpots }: AccountabilityLed
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: Spacing.four,
+    paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.one,
     borderBottomWidth: 1,
-    marginTop: Spacing.two,
-    marginBottom: Spacing.six,
+    marginTop: 0,
+    marginBottom: Spacing.two,
   },
   stateContainer: {
     gap: Spacing.three,

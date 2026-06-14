@@ -57,75 +57,79 @@ export function ConflictMap({ conflicts, language, onDebate }: ConflictMapProps)
         <CustomHeader t={t} conflicts={conflicts} theme={theme} />
       </View>
 
-      {conflicts.map((conflict, index) => (
-        <View
-          key={index}
-          style={[
-            styles.conflictRow,
-            {
-              borderBottomColor: theme.outline,
-            },
-          ]}>
-          {/* Connection flow row */}
-          <View style={styles.flowRow}>
-            {/* Group A */}
-            <View style={[styles.groupChip, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="smallBold" style={[styles.groupName, { color: theme.conflict }]}>
-                {conflict.groupA}
-              </ThemedText>
+      {conflicts.map((conflict, index) => {
+        const isLast = index === conflicts.length - 1;
+        return (
+          <View
+            key={index}
+            style={[
+              styles.conflictRow,
+              {
+                borderBottomColor: theme.outline,
+                borderBottomWidth: isLast ? 0 : 1,
+              },
+            ]}>
+            {/* Connection flow row */}
+            <View style={styles.flowRow}>
+              {/* Group A */}
+              <View style={[styles.groupChip, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold" style={[styles.groupName, { color: theme.conflict }]}>
+                  {conflict.groupA}
+                </ThemedText>
+              </View>
+
+              {/* Arrow */}
+              <View style={styles.arrowWrap}>
+                <SymbolView
+                  name={{ ios: 'arrow.left.and.right', android: 'compare_arrows', web: 'compare_arrows' }}
+                  tintColor={theme.conflict}
+                  size={14}
+                />
+              </View>
+
+              {/* Group B */}
+              <View style={[styles.groupChip, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold" style={[styles.groupName, { color: theme.conflict }]}>
+                  {conflict.groupB}
+                </ThemedText>
+              </View>
             </View>
 
-            {/* Arrow */}
-            <View style={styles.arrowWrap}>
-              <SymbolView
-                name={{ ios: 'arrow.left.and.right', android: 'compare_arrows', web: 'compare_arrows' }}
-                tintColor={theme.conflict}
-                size={14}
-              />
-            </View>
+            {/* Reason */}
+            <ThemedText
+              type="small"
+              style={[styles.reason, { color: theme.text }]}>
+              {conflict.reason}
+            </ThemedText>
 
-            {/* Group B */}
-            <View style={[styles.groupChip, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="smallBold" style={[styles.groupName, { color: theme.conflict }]}>
-                {conflict.groupB}
-              </ThemedText>
-            </View>
+            {/* Debate trigger button — only shown when handler is provided */}
+            {onDebate && (
+              <Pressable
+                onPress={() => onDebate(conflict)}
+                style={({ pressed }) => [
+                  styles.debateBtn,
+                  { backgroundColor: theme.conflictContainer, borderColor: theme.conflict + '66' },
+                  pressed && { opacity: 0.75 },
+                ]}
+              >
+                <SymbolView
+                  name={{ ios: 'flame.fill', android: 'local_fire_department', web: 'local_fire_department' }}
+                  tintColor={theme.conflict}
+                  size={12}
+                />
+                <ThemedText type="code" style={[styles.debateBtnText, { color: theme.conflict }]}>
+                  {t.hearThemDebate}
+                </ThemedText>
+                <SymbolView
+                  name={{ ios: 'speaker.wave.2.fill', android: 'volume_up', web: 'volume_up' }}
+                  tintColor={theme.conflict}
+                  size={11}
+                />
+              </Pressable>
+            )}
           </View>
-
-          {/* Reason */}
-          <ThemedText
-            type="small"
-            style={[styles.reason, { color: theme.text }]}>
-            {conflict.reason}
-          </ThemedText>
-
-          {/* Debate trigger button — only shown when handler is provided */}
-          {onDebate && (
-            <Pressable
-              onPress={() => onDebate(conflict)}
-              style={({ pressed }) => [
-                styles.debateBtn,
-                { backgroundColor: theme.conflictContainer, borderColor: theme.conflict + '66' },
-                pressed && { opacity: 0.75 },
-              ]}
-            >
-              <SymbolView
-                name={{ ios: 'flame.fill', android: 'local_fire_department', web: 'local_fire_department' }}
-                tintColor={theme.conflict}
-                size={12}
-              />
-              <ThemedText type="code" style={[styles.debateBtnText, { color: theme.conflict }]}>
-                {t.hearThemDebate}
-              </ThemedText>
-              <SymbolView
-                name={{ ios: 'speaker.wave.2.fill', android: 'volume_up', web: 'volume_up' }}
-                tintColor={theme.conflict}
-                size={11}
-              />
-            </Pressable>
-          )}
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -142,6 +146,7 @@ function CustomHeader({ t, conflicts, theme }: any) {
 const styles = StyleSheet.create({
   container: {
     alignSelf: 'stretch',
+    marginTop: Spacing.four,
     marginBottom: Spacing.three,
     gap: Spacing.two,
   },
@@ -157,7 +162,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   conflictRow: {
-    borderBottomWidth: 1,
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.one,
     gap: Spacing.two,
