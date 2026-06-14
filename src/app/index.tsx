@@ -56,19 +56,19 @@ const detectLanguageFromText = (text: string): 'en-IN' | 'hi-IN' | 'te-IN' => {
 
 const TRANSCRIPTION_HEADERS = {
   'en-IN': {
-    raw: 'RAW SPEECH TRANSCRIPT (SARVAM AI STT):',
+    raw: 'RAW SPEECH TRANSCRIPT (ELEVENLABS):',
     refined: 'REFINED DECISION PROPOSAL (GEMINI 2.5 FLASH):',
   },
   'hi-IN': {
-    raw: 'कच्चा भाषण प्रतिलेख (सर्वम एआई एसटीटी):',
+    raw: 'कच्चा भाषण प्रतिलेख (sarvamAI):',
     refined: 'संशोधित निर्णय प्रस्ताव (जेमिनी 2.5 फ्लैश):',
   },
   'te-IN': {
-    raw: 'ముడి ప్రసంగ ట్రాన్స్క్రిప్ట్ (సర్వం AI STT):',
+    raw: 'ముడి ప్రసంగ ట్రాన్స్క్రిప్ట్ (sarvamAI):',
     refined: 'శుద్ధి చేయబడిన నిర్ణయ ప్రతిపాదన (జెమిని 2.5 ఫ్లాష్):',
   },
   'unknown': {
-    raw: 'RAW SPEECH TRANSCRIPT (SARVAM AI STT):',
+    raw: 'RAW SPEECH TRANSCRIPT (sarvamAI):',
     refined: 'REFINED DECISION PROPOSAL (GEMINI 2.5 FLASH):',
   },
 };
@@ -509,6 +509,10 @@ export default function HomeScreen() {
         setShowShadowPolicy(false);
         return true;
       }
+      if (currentSimulation) {
+        handleReset();
+        return true;
+      }
       return false;
     };
 
@@ -517,7 +521,7 @@ export default function HomeScreen() {
       subscription.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStakeholder, selectedDebateConflict, showShadowPolicy]);
+  }, [selectedStakeholder, selectedDebateConflict, showShadowPolicy, currentSimulation]);
 
   const handleRetry = () => {
     if (proposalText.trim().length > 0) {
@@ -567,7 +571,7 @@ export default function HomeScreen() {
                 Examine Proposed Decisions
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary" style={styles.welcomeDesc}>
-                Tap the microphone to record your proposed decision. Echo will transcribe your voice using Sarvam AI and surface structural blind spots.
+                Tap the microphone to record your proposed decision. Echo will transcribe your voice using ElevenLabs (English) or sarvamAI (Hindi/Telugu) and surface structural blind spots.
               </ThemedText>
 
               {/* Language Selector */}
@@ -612,7 +616,9 @@ export default function HomeScreen() {
                   <View style={styles.loaderContainer}>
                     <ActivityIndicator color={theme.primary} size="large" />
                     <ThemedText type="code" themeColor="textSecondary" style={styles.statusLabel}>
-                      TRANSCRIBING VOICE VIA SARVAM AI...
+                      {spokenLanguage === 'en-IN'
+                        ? 'TRANSCRIBING VOICE VIA ELEVENLABS...'
+                        : 'TRANSCRIBING VOICE VIA SARVAMAI...'}
                     </ThemedText>
                   </View>
                 ) : isRecording ? (
