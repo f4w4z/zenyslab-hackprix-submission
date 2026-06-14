@@ -19,7 +19,7 @@ Built for the **ZenysLab HackPrix (June 2026)**.
 
 - 👁️ **Who Did We Forget?** - Echo instantly detects communities that are structurally overlooked by a proposed policy (e.g., rural workers, caregivers, disabled individuals).
 - 📊 **Equity Index Score** - An automated algorithmic score (0-100) that drops when stakeholders are forgotten or when high-severity negative impacts are detected.
-- 💬 **Live Stakeholder Debate** - Echo generates distinct AI personas for each affected group and uses ultra-realistic text-to-speech to let you hear their exact concerns and conflicts.
+- 💬 **Live Stakeholder Debate** - Echo uses Groq to generate distinct AI personas for each affected group and ElevenLabs' ultra-realistic text-to-speech to let you hear their exact concerns and conflicts.
 - 📝 **Shadow Policy Generator** - If a policy is deeply flawed, Echo's AI will automatically draft an improved, equitable "Shadow Policy" that explicitly includes the forgotten groups and resolves internal conflicts.
 - 🎙️ **Trilingual Voice Input** - Speak your policy proposal naturally. Echo features native voice-to-text transcription in **English, Hindi, and Telugu**.
 - 🔗 **Solana Accountability Ledger** - All analyses and shadow policies are hashed and permanently logged to the Solana blockchain, creating an immutable, public record of organizational accountability.
