@@ -460,11 +460,9 @@ export default function HomeScreen() {
       setTranslationsCache(prev => ({ ...prev, [langCode]: translated }));
       setDisplayLanguage(langCode);
     } catch (err) {
-      console.error('Failed to translate:', err);
-      Alert.alert(
-        'Translation Failed',
-        'Could not translate the decision details at this moment. Please check your internet connection and try again.'
-      );
+      console.warn('Translation failed, falling back to previous language:', err);
+      // Smoothly revert to the previously displayed language without intrusive errors
+      setDisplayLanguage(displayLanguage);
     } finally {
       setIsTranslating(false);
     }

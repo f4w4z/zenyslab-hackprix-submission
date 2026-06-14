@@ -139,7 +139,8 @@ async function translateSimulation(simulation, langName, apiKey) {
           content:
             'You are a professional translator. You will receive a JSON object with English text values. ' +
             `Translate every string value into ${langName}. ` +
-            'Keep ALL JSON keys in English exactly as given. Return ONLY valid JSON with no extra explanation.',
+            'Keep ALL JSON keys exactly as they are in English. ' +
+            'IMPORTANT: Return ONLY a valid JSON object matching the exact structure of the input. Do not include markdown formatting, backticks, or conversational text. Output raw JSON only.',
         },
         {
           role: 'user',
@@ -162,9 +163,14 @@ async function translateSimulation(simulation, langName, apiKey) {
 
   let t;
   try {
-    const cleaned = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
+    // Extract JSON from markdown code block if present
+    const match = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleaned = match ? match[1].trim() : raw.trim();
+    
     t = JSON.parse(cleaned);
-  } catch {
+  } catch (err) {
+    console.error('[Proxy translate] JSON parse failed.', err.message);
+    console.error('[Proxy translate] Raw output was:', raw);
     throw new Error('Translation response was not valid JSON.');
   }
 
