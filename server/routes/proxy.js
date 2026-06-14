@@ -131,7 +131,8 @@ async function translateSimulation(simulation, langName, apiKey) {
 
   let t;
   try {
-    t = JSON.parse(raw);
+    const cleaned = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
+    t = JSON.parse(cleaned);
   } catch {
     throw new Error('Translation response was not valid JSON.');
   }

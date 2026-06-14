@@ -65,6 +65,36 @@ const TRANSCRIPTION_HEADERS = {
   },
 };
 
+const UI_TRANSLATIONS = {
+  'en-IN': {
+    proposalUnderAnalysis: 'PROPOSAL UNDER ANALYSIS',
+    stakeholderDirectory: 'Stakeholder Impact Directory',
+    groupsCount: (count: number) => `${count} GROUPS`,
+    generateImprovedPolicy: 'Generate Improved Policy',
+    accountability: 'ACCOUNTABILITY',
+    exportReportCard: 'Export Report Card',
+    newAnalysis: 'New Analysis',
+  },
+  'hi-IN': {
+    proposalUnderAnalysis: 'विश्लेषण के तहत प्रस्ताव',
+    stakeholderDirectory: 'हितधारक प्रभाव निर्देशिका',
+    groupsCount: (count: number) => `${count} समूह`,
+    generateImprovedPolicy: 'बेहतर नीति तैयार करें',
+    accountability: 'जवाबदेही',
+    exportReportCard: 'रिपोर्ट कार्ड निर्यात करें',
+    newAnalysis: 'नया विश्लेषण',
+  },
+  'te-IN': {
+    proposalUnderAnalysis: 'విశ్లేషణలో ఉన్న ప్రతిపాదన',
+    stakeholderDirectory: 'స్టేక్‌హోల్డర్ ప్రభావ డైరెక్టరీ',
+    groupsCount: (count: number) => `${count} సమూహాలు`,
+    generateImprovedPolicy: 'మెరుగైన విధానాన్ని రూపొందించండి',
+    accountability: 'జవాబుదారీతనం',
+    exportReportCard: 'రిపోర్ట్ కార్డ్ ఎగుమతి చేయి',
+    newAnalysis: 'కొత్త విశ్లేషణ',
+  },
+};
+
 export default function HomeScreen() {
   const theme = useTheme();
 
@@ -490,6 +520,7 @@ export default function HomeScreen() {
   });
 
   const headers = TRANSCRIPTION_HEADERS[spokenLanguage] || TRANSCRIPTION_HEADERS['en-IN'];
+  const ui = UI_TRANSLATIONS[displayLanguage] || UI_TRANSLATIONS['en-IN'];
 
   // ---------------------------------------------------------------------------
   // Render
@@ -680,6 +711,7 @@ export default function HomeScreen() {
                 stakeholders={displayedSimulation?.stakeholders || []}
                 conflicts={displayedSimulation?.conflicts || []}
                 blindSpots={displayedSimulation?.blindSpots || []}
+                language={displayLanguage}
               />
               
               {/* Language Selector */}
@@ -721,7 +753,7 @@ export default function HomeScreen() {
               <View style={[styles.proposalBanner, { borderLeftColor: theme.primary }]}>
                 <View style={styles.bannerHeaderRow}>
                   <ThemedText type="code" themeColor="primary" style={styles.bannerLabel}>
-                    PROPOSAL UNDER ANALYSIS
+                    {ui.proposalUnderAnalysis}
                   </ThemedText>
 
                 </View>
@@ -768,10 +800,10 @@ export default function HomeScreen() {
               {/* Stakeholder Directory */}
               <View style={styles.directoryHeader}>
                 <ThemedText type="smallBold" style={styles.directoryTitle}>
-                  Stakeholder Impact Directory
+                  {ui.stakeholderDirectory}
                 </ThemedText>
                 <ThemedText type="code" themeColor="textSecondary">
-                  {displayedSimulation?.stakeholders.length} GROUPS
+                  {ui.groupsCount(displayedSimulation?.stakeholders.length || 0)}
                 </ThemedText>
               </View>
 
@@ -783,6 +815,7 @@ export default function HomeScreen() {
                   impact={stakeholder.impact}
                   isOverlooked={stakeholder.isOverlooked}
                   description={stakeholder.description}
+                  language={displayLanguage}
                   onPress={() => openStakeholderDetail(stakeholder)}
                 />
               ))}
@@ -801,7 +834,7 @@ export default function HomeScreen() {
                   ]}>
                   <ThemedText style={{ fontSize: 18 }}>✨</ThemedText>
                   <ThemedText type="smallBold" style={{ color: theme.primary }}>
-                    Generate Improved Policy
+                    {ui.generateImprovedPolicy}
                   </ThemedText>
                 </Pressable>
               )}
@@ -810,6 +843,7 @@ export default function HomeScreen() {
               {displayedSimulation?.conflicts && displayedSimulation.conflicts.length > 0 && (
                 <ConflictMap
                   conflicts={displayedSimulation.conflicts}
+                  language={displayLanguage}
                   onDebate={handleOpenDebate}
                 />
               )}
@@ -817,7 +851,7 @@ export default function HomeScreen() {
               {/* Accountability Ledger */}
               <View style={{ marginTop: Spacing.four, borderTopWidth: 1, borderTopColor: theme.outline, paddingTop: Spacing.four, marginBottom: Spacing.two }}>
                 <ThemedText type="code" themeColor="textSecondary" style={{ fontWeight: '700', letterSpacing: 0.5 }}>
-                  ACCOUNTABILITY
+                  {ui.accountability}
                 </ThemedText>
               </View>
               <AccountabilityLedger
@@ -835,7 +869,7 @@ export default function HomeScreen() {
                     pressed && { opacity: 0.8 },
                   ]}>
                   <ThemedText style={{ fontSize: 16 }}>📊</ThemedText>
-                  <ThemedText type="code" style={{ fontWeight: '700', color: theme.primary }}>Export Report Card</ThemedText>
+                  <ThemedText type="code" style={{ fontWeight: '700', color: theme.primary }}>{ui.exportReportCard}</ThemedText>
                 </Pressable>
 
                 {/* Reset button */}
@@ -851,10 +885,10 @@ export default function HomeScreen() {
                     tintColor={theme.text}
                     size={14}
                   />
-                  <ThemedText type="code" style={{ fontWeight: '700' }}>New Analysis</ThemedText>
+                  <ThemedText type="code" style={{ fontWeight: '700' }}>{ui.newAnalysis}</ThemedText>
                 </Pressable>
               </View>
-              <ReportCard simulation={displayedSimulation} />
+              <ReportCard simulation={displayedSimulation} language={displayLanguage} />
             </View>
           )}
         </ScrollView>

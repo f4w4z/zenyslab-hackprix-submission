@@ -164,8 +164,41 @@ async function prefetchTurn(params: {
 }
 
 // ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+const DEBATE_TRANSLATIONS = {
+  'en-IN': {
+    liveDebate: 'LIVE DEBATE',
+    turns: (count: number) => `${count} TURNS`,
+    conflictLabel: 'CONFLICT:',
+    emptyText: "Tap Start Debate — they'll fight it out with real voices, no breaks.",
+    loadingArgument: 'loading argument...',
+    startDebate: 'Start Debate',
+    restartDebate: 'Restart',
+    stopDebate: 'Stop',
+    noteText: 'AI voices · Arguments pre-loaded · Runs until stopped',
+  },
+  'hi-IN': {
+    liveDebate: 'लाइव बहस',
+    turns: (count: number) => `${count} बारी`,
+    conflictLabel: 'संघर्ष:',
+    emptyText: 'बहस शुरू करें पर टैप करें - वे बिना किसी रोक के वास्तविक आवाजों के साथ मुकाबला करेंगे।',
+    loadingArgument: 'तर्क लोड हो रहा है...',
+    startDebate: 'बहस शुरू करें',
+    restartDebate: 'पुनः आरंभ करें',
+    stopDebate: 'रोकें',
+    noteText: 'एआई आवाजें · तर्क प्री-लोडेड · रुकने तक चलता है',
+  },
+  'te-IN': {
+    liveDebate: 'లైవ్ చర్చ',
+    turns: (count: number) => `${count} వంతులు`,
+    conflictLabel: 'వైరుధ్యం:',
+    emptyText: 'చర్చను ప్రారంభించండి నొక్కండి — వారు నిజమైన వాయిస్‌లతో నిరంతరంగా చర్చించుకుంటారు.',
+    loadingArgument: 'వాదన లోడ్ అవుతోంది...',
+    startDebate: 'చర్చను ప్రారంభించండి',
+    restartDebate: 'మళ్లీ ప్రారంభించండి',
+    stopDebate: 'ఆపివేయి',
+    noteText: 'AI వాయిస్‌లు · వాదనలు ప్రీ-లోడ్ చేయబడ్డాయి · ఆపే వరకు నడుస్తుంది',
+  },
+};
 
 export function DebateArena({
   conflict,
@@ -353,6 +386,9 @@ export function DebateArena({
     </View>
   );
 
+  const currentLang = language === 'unknown' ? 'en-IN' : language;
+  const t = DEBATE_TRANSLATIONS[currentLang] || DEBATE_TRANSLATIONS['en-IN'];
+
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
@@ -368,12 +404,12 @@ export function DebateArena({
             size={14}
           />
           <ThemedText type="code" style={[styles.headerTitle, { color: theme.conflict }]}>
-            LIVE DEBATE
+            {t.liveDebate}
           </ThemedText>
           {turnCount > 0 && (
             <View style={[styles.turnBadge, { backgroundColor: theme.backgroundElement }]}>
               <ThemedText type="code" style={[styles.turnBadgeText, { color: theme.textSecondary }]}>
-                {turnCount} TURNS
+                {t.turns(turnCount)}
               </ThemedText>
             </View>
           )}
@@ -396,7 +432,7 @@ export function DebateArena({
       {/* Conflict reason */}
       <View style={[styles.conflictBanner, { backgroundColor: theme.backgroundElement }]}>
         <ThemedText type="code" style={[styles.conflictLabel, { color: theme.textSecondary }]}>
-          CONFLICT:
+          {t.conflictLabel}
         </ThemedText>
         <ThemedText type="small" style={[styles.conflictReason, { color: theme.text }]} numberOfLines={2}>
           {conflict.reason}
@@ -426,7 +462,7 @@ export function DebateArena({
         {transcript.length === 0 && !isLoading && (
           <View style={styles.empty}>
             <ThemedText type="small" themeColor="textSecondary" style={styles.emptyText}>
-              Tap Start Debate — they'll fight it out with real voices, no breaks.
+              {t.emptyText}
             </ThemedText>
           </View>
         )}
@@ -466,7 +502,7 @@ export function DebateArena({
               <View style={styles.typingRow}>
                 <ActivityIndicator size="small" color={theme.conflict} />
                 <ThemedText type="code" style={[styles.typingText, { color: theme.textSecondary }]}>
-                  loading argument...
+                  {t.loadingArgument}
                 </ThemedText>
               </View>
             </View>
@@ -496,7 +532,7 @@ export function DebateArena({
               size={15}
             />
             <ThemedText type="smallBold" style={[styles.btnText, { color: theme.surface }]}>
-              {transcript.length > 0 ? 'Restart' : 'Start Debate'}
+              {transcript.length > 0 ? t.restartDebate : t.startDebate}
             </ThemedText>
           </Pressable>
         ) : (
@@ -509,13 +545,13 @@ export function DebateArena({
             ]}
           >
             <SymbolView name={{ ios: 'stop.fill', android: 'stop', web: 'stop' }} tintColor={theme.error} size={15} />
-            <ThemedText type="smallBold" style={[styles.btnText, { color: theme.error }]}>Stop</ThemedText>
+            <ThemedText type="smallBold" style={[styles.btnText, { color: theme.error }]}>{t.stopDebate}</ThemedText>
           </Pressable>
         )}
       </View>
 
       <ThemedText type="code" themeColor="textSecondary" style={styles.note}>
-        AI voices · Arguments pre-loaded · Runs until stopped
+        {t.noteText}
       </ThemedText>
     </View>
   );

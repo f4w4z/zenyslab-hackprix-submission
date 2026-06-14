@@ -20,26 +20,48 @@ export interface StakeholderCardProps {
   impact: StakeholderImpact;
   isOverlooked?: boolean;
   description: string;
+  language?: 'en-IN' | 'hi-IN' | 'te-IN';
   onPress: () => void;
 }
 
 const IMPACT_CONFIG = {
   positive: {
-    label: 'Positive',
     iosIcon: 'checkmark.circle.fill',
     androidIcon: 'check_circle',
   },
   negative: {
-    label: 'Negative',
     iosIcon: 'xmark.circle.fill',
     androidIcon: 'cancel',
   },
   mixed: {
-    label: 'Mixed',
     iosIcon: 'questionmark.circle.fill',
     androidIcon: 'help',
   },
 } as const;
+
+const CARD_TRANSLATIONS = {
+  'en-IN': {
+    overlooked: 'OVERLOOKED',
+    hearPerspective: 'Hear perspective',
+    positive: 'Positive',
+    negative: 'Negative',
+    mixed: 'Mixed',
+  },
+  'hi-IN': {
+    overlooked: 'अनदेखा',
+    hearPerspective: 'दृष्टिकोण सुनें',
+    positive: 'सकारात्मक',
+    negative: 'नकारात्मक',
+    mixed: 'मिश्रित',
+  },
+  'te-IN': {
+    overlooked: 'నిర్లక్ష్యం చేయబడింది',
+    hearPerspective: 'దృక్పథాన్ని వినండి',
+    positive: 'సానుకూల',
+    negative: 'ప్రతికూల',
+    mixed: 'మిశ్రమ',
+  },
+};
 
 export function StakeholderCard({
   name,
@@ -47,6 +69,7 @@ export function StakeholderCard({
   impact,
   isOverlooked = false,
   description,
+  language,
   onPress,
 }: StakeholderCardProps) {
   const theme = useTheme();
@@ -84,6 +107,9 @@ export function StakeholderCard({
   const { bg: impactBg, text: impactText } = impactColors[safeImpact];
   const iconConfig = IMPACT_CONFIG[safeImpact];
 
+  const currentLang = language || 'en-IN';
+  const t = CARD_TRANSLATIONS[currentLang] || CARD_TRANSLATIONS['en-IN'];
+
   return (
     <Animated.View style={animatedStyle}>
       <Pressable
@@ -114,7 +140,7 @@ export function StakeholderCard({
                   <ThemedText
                     type="code"
                     style={[styles.badgeText, { color: theme.warning, fontSize: 9 }]}>
-                    OVERLOOKED
+                    {t.overlooked}
                   </ThemedText>
                 </View>
               )}
@@ -136,7 +162,7 @@ export function StakeholderCard({
               size={13}
             />
             <ThemedText type="code" style={[styles.impactText, { color: impactText }]}>
-              {iconConfig.label}
+              {t[safeImpact]}
             </ThemedText>
           </View>
         </View>
@@ -151,7 +177,7 @@ export function StakeholderCard({
 
         <View style={styles.cardFooter}>
           <ThemedText type="linkPrimary" style={styles.listenText}>
-            Hear perspective
+            {t.hearPerspective}
           </ThemedText>
           <SymbolView
             name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}

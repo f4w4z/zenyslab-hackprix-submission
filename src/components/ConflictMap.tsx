@@ -9,9 +9,28 @@ import { ConflictPair } from '@/constants/mockData';
 
 export interface ConflictMapProps {
   conflicts: ConflictPair[];
+  language?: 'en-IN' | 'hi-IN' | 'te-IN';
   /** When provided, a "HEAR THEM DEBATE" button is rendered per conflict row */
   onDebate?: (conflict: ConflictPair) => void;
 }
+
+const CONFLICT_TRANSLATIONS = {
+  'en-IN': {
+    conflictMap: 'CONFLICT MAP',
+    tensionsDetected: (count: number) => `(${count} TENSION${count > 1 ? 'S' : ''} DETECTED)`,
+    hearThemDebate: 'HEAR THEM DEBATE',
+  },
+  'hi-IN': {
+    conflictMap: 'संघर्ष मानचित्र',
+    tensionsDetected: (count: number) => `(${count} तनाव पाए गए)`,
+    hearThemDebate: 'बहस सुनें',
+  },
+  'te-IN': {
+    conflictMap: 'వైరుధ్యాల పటం',
+    tensionsDetected: (count: number) => `(${count} వైరుధ్యాలు కనుగొనబడ్డాయి)`,
+    hearThemDebate: 'వారి చర్చ వినండి',
+  },
+};
 
 /**
  * Renders a clean list of conflict pairs discovered by Gemini.
@@ -19,10 +38,13 @@ export interface ConflictMapProps {
  * Color-coded with the conflict token from the design system.
  * When onDebate is provided, a Debate button is shown per row.
  */
-export function ConflictMap({ conflicts, onDebate }: ConflictMapProps) {
+export function ConflictMap({ conflicts, language, onDebate }: ConflictMapProps) {
   const theme = useTheme();
 
   if (!conflicts || conflicts.length === 0) return null;
+
+  const currentLang = language || 'en-IN';
+  const t = CONFLICT_TRANSLATIONS[currentLang] || CONFLICT_TRANSLATIONS['en-IN'];
 
   return (
     <View style={styles.container}>
@@ -32,9 +54,7 @@ export function ConflictMap({ conflicts, onDebate }: ConflictMapProps) {
           tintColor={theme.conflict}
           size={16}
         />
-        <ThemedText type="code" style={[styles.headerText, { color: theme.conflict }]}>
-          CONFLICT MAP ({conflicts.length} TENSION{conflicts.length > 1 ? 'S' : ''} DETECTED)
-        </ThemedText>
+        <CustomHeader t={t} conflicts={conflicts} theme={theme} />
       </View>
 
       {conflicts.map((conflict, index) => (
@@ -95,7 +115,7 @@ export function ConflictMap({ conflicts, onDebate }: ConflictMapProps) {
                 size={12}
               />
               <ThemedText type="code" style={[styles.debateBtnText, { color: theme.conflict }]}>
-                HEAR THEM DEBATE
+                {t.hearThemDebate}
               </ThemedText>
               <SymbolView
                 name={{ ios: 'speaker.wave.2.fill', android: 'volume_up', web: 'volume_up' }}
@@ -107,6 +127,15 @@ export function ConflictMap({ conflicts, onDebate }: ConflictMapProps) {
         </View>
       ))}
     </View>
+  );
+}
+
+// Simple helper component to render text safely without template inside jsx element
+function CustomHeader({ t, conflicts, theme }: any) {
+  return (
+    <ThemedText type="code" style={[styles.headerText, { color: theme.conflict }]}>
+      {t.conflictMap} {t.tensionsDetected(conflicts.length)}
+    </ThemedText>
   );
 }
 

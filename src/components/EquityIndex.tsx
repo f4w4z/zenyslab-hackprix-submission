@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
@@ -9,6 +9,7 @@ export interface EquityIndexProps {
   stakeholders: Stakeholder[];
   conflicts: ConflictPair[];
   blindSpots: string[];
+  language?: 'en-IN' | 'hi-IN' | 'te-IN';
 }
 
 export function calculateEquityScore(
@@ -44,21 +45,53 @@ export function calculateEquityScore(
   return finalScore;
 }
 
-export function getEquityLabel(val: number, blindSpotsCount: number) {
-  if (val >= 80) return 'Low Risk — Inclusive Policy';
-  if (val >= 50) return 'Medium Risk — Review Recommended';
+const EQUITY_TRANSLATIONS = {
+  'en-IN': {
+    title: 'EQUITY INDEX',
+    subtext: 'out of 100',
+    inclusivePolicy: 'Low Risk — Inclusive Policy',
+    reviewRecommended: 'Medium Risk — Review Recommended',
+    groupsOverlooked: (count: number) => `High Risk — ${count} group${count > 1 ? 's' : ''} overlooked`,
+    highRiskImpacts: 'High Risk — Significant Impacts Detected',
+  },
+  'hi-IN': {
+    title: 'इक्विटी इंडेक्स',
+    subtext: '100 में से',
+    inclusivePolicy: 'कम जोखिम — समावेशी नीति',
+    reviewRecommended: 'मध्यम जोखिम — समीक्षा की सिफारिश की गई',
+    groupsOverlooked: (count: number) => `उच्च जोखिम — ${count} समूह अनदेखे किए गए`,
+    highRiskImpacts: 'उच्च जोखिम — महत्वपूर्ण प्रभाव पाए गए',
+  },
+  'te-IN': {
+    title: 'ఈక్విటీ ఇండెక్స్',
+    subtext: '100 కి గాను',
+    inclusivePolicy: 'తక్కువ ప్రమాదం — సమగ్ర విధానం',
+    reviewRecommended: 'మధ్యస్థ ప్రమాదం — సమీక్ష సిఫార్సు చేయబడింది',
+    groupsOverlooked: (count: number) => `అధిక ప్రమాదం — ${count} సమూహాలు నిర్లక్ష్యం చేయబడ్డాయి`,
+    highRiskImpacts: 'అధిక ప్రమాదం — ముఖ్యమైన ప్రభావాలు కనుగొనబడ్డాయి',
+  },
+};
+
+export function getEquityLabel(val: number, blindSpotsCount: number, language?: 'en-IN' | 'hi-IN' | 'te-IN') {
+  const currentLang = language || 'en-IN';
+  const t = EQUITY_TRANSLATIONS[currentLang] || EQUITY_TRANSLATIONS['en-IN'];
+  if (val >= 80) return t.inclusivePolicy;
+  if (val >= 50) return t.reviewRecommended;
   
   if (blindSpotsCount > 0) {
-    return `High Risk — ${blindSpotsCount} group${blindSpotsCount > 1 ? 's' : ''} overlooked`;
+    return t.groupsOverlooked(blindSpotsCount);
   }
-  return 'High Risk — Significant Impacts Detected';
+  return t.highRiskImpacts;
 }
 
-export function EquityIndex({ stakeholders, conflicts, blindSpots }: EquityIndexProps) {
+export function EquityIndex({ stakeholders, conflicts, blindSpots, language }: EquityIndexProps) {
   const finalScore = calculateEquityScore(stakeholders, conflicts, blindSpots);
   const [displayScore, setDisplayScore] = useState(0);
   
-  const animatedValue = useRef(new Animated.Value(0)).current;
+  const [animatedValue] = useState(() => new Animated.Value(0));
+
+  const currentLang = language || 'en-IN';
+  const t = EQUITY_TRANSLATIONS[currentLang] || EQUITY_TRANSLATIONS['en-IN'];
 
   useEffect(() => {
     animatedValue.setValue(0);
@@ -93,13 +126,13 @@ export function EquityIndex({ stakeholders, conflicts, blindSpots }: EquityIndex
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText style={styles.title}>EQUITY INDEX</ThemedText>
+      <ThemedText style={styles.title}>{t.title}</ThemedText>
       
       <View style={styles.scoreContainer}>
         <ThemedText style={[styles.scoreNumber, { color: currentColor }]}>
           {displayScore}
         </ThemedText>
-        <ThemedText style={styles.scoreSubtext}>out of 100</ThemedText>
+        <ThemedText style={styles.scoreSubtext}>{t.subtext}</ThemedText>
       </View>
 
       <View style={styles.barContainer}>
@@ -118,7 +151,7 @@ export function EquityIndex({ stakeholders, conflicts, blindSpots }: EquityIndex
       </View>
 
       <ThemedText style={[styles.label, { color: currentColor }]}>
-        "{getEquityLabel(displayScore, blindSpots?.length || 0)}"
+        "{getEquityLabel(displayScore, blindSpots?.length || 0, language)}"
       </ThemedText>
     </ThemedView>
   );
