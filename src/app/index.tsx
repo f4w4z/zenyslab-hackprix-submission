@@ -46,6 +46,25 @@ const detectLanguageFromText = (text: string): 'en-IN' | 'hi-IN' | 'te-IN' => {
   return 'en-IN';
 };
 
+const TRANSCRIPTION_HEADERS = {
+  'en-IN': {
+    raw: 'RAW SPEECH TRANSCRIPT (SARVAM AI STT):',
+    refined: 'REFINED DECISION PROPOSAL (GEMINI 2.5 FLASH):',
+  },
+  'hi-IN': {
+    raw: 'कच्चा भाषण प्रतिलेख (सर्वम एआई एसटीटी):',
+    refined: 'संशोधित निर्णय प्रस्ताव (जेमिनी 2.5 फ्लैश):',
+  },
+  'te-IN': {
+    raw: 'ముడి ప్రసంగ ట్రాన్స్క్రిప్ట్ (సర్వం AI STT):',
+    refined: 'శుద్ధి చేయబడిన నిర్ణయ ప్రతిపాదన (జెమిని 2.5 ఫ్లాష్):',
+  },
+  'unknown': {
+    raw: 'RAW SPEECH TRANSCRIPT (SARVAM AI STT):',
+    refined: 'REFINED DECISION PROPOSAL (GEMINI 2.5 FLASH):',
+  },
+};
+
 export default function HomeScreen() {
   const theme = useTheme();
 
@@ -209,15 +228,17 @@ export default function HomeScreen() {
             setRawTranscriptText(rawText);
             
             // Auto detect language from raw text if user selected Auto Detect
+            let currentLang = spokenLanguage;
             if (spokenLanguage === 'unknown') {
               const detected = detectLanguageFromText(rawText);
               // Update ref immediately so runAnalysis sees the correct language
               // even before React flushes the setState below.
               spokenLanguageRef.current = detected;
               setSpokenLanguage(detected);
+              currentLang = detected;
             }
 
-            const refinedText = await refineTranscript(rawText);
+            const refinedText = await refineTranscript(rawText, currentLang);
             setProposalText(refinedText);
           } catch (err: any) {
             setErrorMessage(err.message || 'Speech-to-text failed. Check your API key.');
@@ -285,15 +306,17 @@ export default function HomeScreen() {
               setRawTranscriptText(rawText);
               
               // Auto detect language from raw text if user selected Auto Detect
+              let currentLang = spokenLanguage;
               if (spokenLanguage === 'unknown') {
                 const detected = detectLanguageFromText(rawText);
                 // Update ref immediately so runAnalysis sees the correct language
                 // even before React flushes the setState below.
                 spokenLanguageRef.current = detected;
                 setSpokenLanguage(detected);
+                currentLang = detected;
               }
 
-              const refinedText = await refineTranscript(rawText);
+              const refinedText = await refineTranscript(rawText, currentLang);
               setProposalText(refinedText);
             } catch (err: any) {
               setErrorMessage(err.message || 'Speech-to-text failed.');
@@ -466,6 +489,7 @@ export default function HomeScreen() {
     outputRange: [0, 0.45],
   });
 
+  const headers = TRANSCRIPTION_HEADERS[spokenLanguage] || TRANSCRIPTION_HEADERS['en-IN'];
 
   // ---------------------------------------------------------------------------
   // Render
@@ -567,7 +591,7 @@ export default function HomeScreen() {
                   {rawTranscriptText.trim().length > 0 && (
                     <>
                       <ThemedText type="code" themeColor="textSecondary" style={styles.transcriptionHeader}>
-                        RAW SPEECH TRANSCRIPT (SARVAM AI STT):
+                        {headers.raw}
                       </ThemedText>
                       <ThemedText type="small" themeColor="textSecondary" style={[styles.transcriptionText, { marginBottom: Spacing.two, opacity: 0.8 }]}>
                         &ldquo;{rawTranscriptText}&rdquo;
@@ -575,7 +599,7 @@ export default function HomeScreen() {
                     </>
                   )}
                   <ThemedText type="code" themeColor="primary" style={styles.transcriptionHeader}>
-                    REFINED DECISION PROPOSAL (GEMINI 2.5 FLASH):
+                    {headers.refined}
                   </ThemedText>
                   <ThemedText type="small" style={styles.transcriptionText}>
                     &ldquo;{proposalText}&rdquo;

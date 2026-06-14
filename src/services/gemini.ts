@@ -64,7 +64,7 @@ export async function translateSimulationRecord(simulation: SimulationRecord, ta
 /**
  * Refines a raw speech-to-text transcript using Gemini 2.0 Flash via the secure server proxy.
  */
-export async function refineTranscript(rawText: string): Promise<string> {
+export async function refineTranscript(rawText: string, languageCode?: string): Promise<string> {
   const trimmed = rawText.trim();
   if (trimmed.length === 0) {
     return rawText;
@@ -74,7 +74,7 @@ export async function refineTranscript(rawText: string): Promise<string> {
     const response = await fetch(`${getApiUrl()}/api/proxy/gemini/refine`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rawText }),
+      body: JSON.stringify({ rawText, languageCode }),
     });
 
     if (!response.ok) {

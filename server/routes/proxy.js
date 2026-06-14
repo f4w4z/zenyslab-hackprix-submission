@@ -380,7 +380,7 @@ router.post('/gemini/shadow-policy', async (req, res) => {
 });
 
 router.post('/gemini/refine', async (req, res) => {
-  const { rawText } = req.body;
+  const { rawText, languageCode } = req.body;
   const trimmed = rawText ? rawText.trim() : '';
   if (!trimmed) {
     return res.json({ refinedText: '' });
@@ -391,6 +391,9 @@ router.post('/gemini/refine', async (req, res) => {
     return res.status(500).json({ error: 'Missing API key on server.' });
   }
 
+  const langMap = { 'hi-IN': 'Hindi', 'te-IN': 'Telugu', 'en-IN': 'English' };
+  const targetLang = langMap[languageCode] || 'English';
+
   try {
     const requestBody = {
       model: 'llama-3.1-8b-instant',
@@ -399,14 +402,14 @@ router.post('/gemini/refine', async (req, res) => {
           role: 'system',
           content:
             'You are a speech transcription refinement assistant.\n' +
-            'The user spoke a decision proposal in English, Hindi, Telugu, or another language, which was transcribed using an automated tool. The transcription may contain phonetic errors, spelling mistakes, or missing punctuation.\n' +
+            'The user spoke a decision proposal, which was transcribed using an automated tool. The transcription may contain phonetic errors, spelling mistakes, or missing punctuation.\n' +
             'Your task is to:\n' +
             '1. Correct all spelling, grammar, phonetic mistakes, and punctuation.\n' +
-            '2. If the input transcript is in Hindi, Telugu, or any other language, translate it into clean, natural English.\n' +
+            `2. Output the refined transcript in the target language: ${targetLang}. Do NOT translate it to any other language.\n` +
             '3. Deduce what decision proposal the user was trying to say based on context.\n' +
             '4. Keep the user\'s original intent intact.\n' +
-            '5. Output ONLY the refined, clean English transcript. Do not add any conversational text, explanations, or metadata.\n' +
-            'If the decision text is in Hindi, Telugu, or any other language, analyze it directly without commenting on the language. Never say \'I don\'t see a transcription\' or describe the input — just analyze it.',
+            `5. Output ONLY the refined, clean transcript in ${targetLang}. Do not add any conversational text, explanations, or metadata.\n` +
+            `Never say 'I don't see a transcription' or describe the input — just output the refined text in ${targetLang}.`,
         },
         {
           role: 'user',
